@@ -35,14 +35,28 @@ fi
 
 cd "$APP_DIR"
 
-# 4. Install backend dependencies
+# 4. Link Nginx and Systemd service immediately
+if [ -f "$APP_DIR/aws/nginx/dropx.conf" ]; then
+  sudo cp "$APP_DIR/aws/nginx/dropx.conf" /etc/nginx/sites-available/dropx.conf
+  sudo ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/default
+  sudo nginx -t && sudo systemctl reload nginx
+fi
+
+if [ -f "$APP_DIR/aws/systemd/dropx-backend.service" ]; then
+  sudo cp "$APP_DIR/aws/systemd/dropx-backend.service" /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl enable dropx-backend
+fi
+
+# 5. Install backend dependencies & start backend
 if [ -d "$APP_DIR/backend" ]; then
   cd "$APP_DIR/backend"
   mkdir -p data
   npm install
+  sudo systemctl restart dropx-backend || true
 fi
 
-# 5. Build frontend static assets
+# 6. Install frontend dependencies & build frontend assets
 if [ -d "$APP_DIR/frontend" ]; then
   cd "$APP_DIR/frontend"
   npm install
@@ -51,20 +65,7 @@ if [ -d "$APP_DIR/frontend" ]; then
     sudo cp -r "$APP_DIR/frontend/dist/"* "$WEB_DIR/"
   fi
   sudo chown -R www-data:www-data /var/www/dropx
-fi
-
-# 6. Enable systemd service and Nginx
-if [ -f "$APP_DIR/aws/systemd/dropx-backend.service" ]; then
-  sudo cp "$APP_DIR/aws/systemd/dropx-backend.service" /etc/systemd/system/
-  sudo systemctl daemon-reload
-  sudo systemctl enable dropx-backend
-  sudo systemctl restart dropx-backend
-fi
-
-if [ -f "$APP_DIR/aws/nginx/dropx.conf" ]; then
-  sudo cp "$APP_DIR/aws/nginx/dropx.conf" /etc/nginx/sites-available/dropx.conf
-  sudo ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/default
-  sudo nginx -t && sudo systemctl reload nginx
+  sudo systemctl reload nginx
 fi
 
 echo "========================================="

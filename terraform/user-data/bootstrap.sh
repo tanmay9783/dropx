@@ -4,32 +4,41 @@ echo "=== DropX EC2 Bootstrap Starting: $(date) ==="
 
 export DEBIAN_FRONTEND=noninteractive
 
-# 1. Update OS and install Nginx + Node.js 20
+# 1. Update OS and install Nginx, Node.js, and AWS CLI
 apt-get update -y
-apt-get install -y curl git nginx ca-certificates gnupg build-essential
+apt-get install -y curl git nginx ca-certificates gnupg build-essential awscli
 
 if ! command -v node &> /dev/null; then
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   apt-get install -y nodejs
 fi
 
-# 2. Clone Repository
+# 2. Setup Application Directories
 APP_DIR="/opt/dropx"
-rm -rf "$APP_DIR"
-echo "=== Cloning Repository ==="
-git clone https://github.com/tanmay9783/dropx.git "$APP_DIR"
-cd "$APP_DIR"
+rm -rf "$APP_DIR" /tmp/dropx-app.tar.gz
+mkdir -p "$APP_DIR" /var/www/html /var/www/dropx/frontend/dist
 
-# 3. Deploy Pre-built Frontend Assets Instantly to /var/www/html
-echo "=== Deploying Frontend ==="
+# 3. Download Deployment Package from S3 (IAM Authenticated)
+echo "=== Downloading DropX from S3 ==="
+aws s3 cp s3://dropx-prod-files-ap-south-1/deploy/dropx-app.tar.gz /tmp/dropx-app.tar.gz --region ap-south-1 || true
+
+if [ -f /tmp/dropx-app.tar.gz ]; then
+  tar -xzf /tmp/dropx-app.tar.gz -C "$APP_DIR"
+else
+  git clone https://github.com/tanmay9783/dropx.git "$APP_DIR" || true
+fi
+
+# 4. Deploy Frontend Assets directly to /var/www/html
+echo "=== Deploying Frontend Assets ==="
 rm -rf /var/www/html/*
-mkdir -p /var/www/html /var/www/dropx/frontend/dist
-cp -rf "$APP_DIR/frontend/dist/"* /var/www/html/
-cp -rf "$APP_DIR/frontend/dist/"* /var/www/dropx/frontend/dist/
+if [ -d "$APP_DIR/frontend/dist" ]; then
+  cp -rf "$APP_DIR/frontend/dist/"* /var/www/html/
+  cp -rf "$APP_DIR/frontend/dist/"* /var/www/dropx/frontend/dist/
+fi
 chmod -R 755 /var/www
 chown -R www-data:www-data /var/www/html /var/www/dropx
 
-# 4. Overwrite Nginx Configuration
+# 5. Overwrite Nginx Configuration
 echo "=== Configuring Nginx ==="
 cat << 'EOF' > /etc/nginx/sites-available/default
 server {
@@ -69,12 +78,14 @@ EOF
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 systemctl restart nginx
 
-# 5. Install Production Backend Dependencies & Start Service
+# 6. Install Production Backend Dependencies & Start Service
 echo "=== Setting up Backend ==="
-cd "$APP_DIR/backend"
-mkdir -p data storage/uploads
-chmod -R 777 data storage
-npm install --omit=dev || npm install
+if [ -d "$APP_DIR/backend" ]; then
+  cd "$APP_DIR/backend"
+  mkdir -p data storage/uploads
+  chmod -R 777 data storage
+  npm install --omit=dev || npm install
+fi
 
 cat << 'EOF' > /etc/systemd/system/dropx-backend.service
 [Unit]

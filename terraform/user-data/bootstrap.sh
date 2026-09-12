@@ -14,58 +14,95 @@ if ! command -v node &> /dev/null; then
   apt-get install -y nodejs
 fi
 
-# 3. Setup Directories
 APP_DIR="/opt/dropx"
-WEB_DIR="/var/www/dropx/frontend/dist"
-
-mkdir -p "$WEB_DIR"
 rm -rf "$APP_DIR"
 
-# 4. Clone Repository
+# 3. Clone Repository
 echo "=== Cloning Repository ==="
 git clone https://github.com/tanmay9783/dropx.git "$APP_DIR"
 cd "$APP_DIR"
 
-# 5. Configure and Restart Nginx immediately
+# 4. Deploy React Frontend directly to /var/www/html and /var/www/dropx/frontend/dist
+echo "=== Deploying Frontend ==="
+rm -rf /var/www/html/*
+mkdir -p /var/www/dropx/frontend/dist /var/www/html
+cp -r "$APP_DIR/frontend/dist/"* /var/www/html/
+cp -r "$APP_DIR/frontend/dist/"* /var/www/dropx/frontend/dist/
+chown -R www-data:www-data /var/www/html /var/www/dropx
+
+# 5. Overwrite Nginx default configuration directly
 echo "=== Configuring Nginx ==="
-rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/default
-cp "$APP_DIR/aws/nginx/dropx.conf" /etc/nginx/sites-available/dropx.conf
-ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/dropx.conf
+cat << 'EOF' > /etc/nginx/sites-available/default
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    root /var/www/html;
+    index index.html;
+    server_name _;
 
-# Copy pre-built frontend dist if available
-if [ -d "$APP_DIR/frontend/dist" ]; then
-  cp -r "$APP_DIR/frontend/dist/"* "$WEB_DIR/"
-  chown -R www-data:www-data /var/www/dropx
-fi
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
 
-nginx -t && systemctl restart nginx
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    }
 
-# 6. Install Backend Dependencies & Start Service
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    }
+}
+EOF
+
+ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+systemctl restart nginx
+
+# 6. Install backend dependencies & start systemd service
 echo "=== Setting up Backend ==="
-if [ -d "$APP_DIR/backend" ]; then
-  cd "$APP_DIR/backend"
-  mkdir -p data
-  npm install --omit=dev || npm install
-fi
+cd "$APP_DIR/backend"
+mkdir -p data
+npm install --omit=dev || npm install
 
-if [ -f "$APP_DIR/aws/systemd/dropx-backend.service" ]; then
-  cp "$APP_DIR/aws/systemd/dropx-backend.service" /etc/systemd/system/
-  systemctl daemon-reload
-  systemctl enable dropx-backend
-  systemctl restart dropx-backend
-fi
+cat << 'EOF' > /etc/systemd/system/dropx-backend.service
+[Unit]
+Description=DropX Node.js Backend Service
+After=network.target
 
-# 7. Build Fresh Frontend Assets
-echo "=== Building Frontend ==="
-if [ -d "$APP_DIR/frontend" ]; then
-  cd "$APP_DIR/frontend"
-  npm install
-  npx vite build || true
-  if [ -d "$APP_DIR/frontend/dist" ]; then
-    cp -r "$APP_DIR/frontend/dist/"* "$WEB_DIR/"
-    chown -R www-data:www-data /var/www/dropx
-  fi
-  systemctl restart nginx
-fi
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/dropx/backend
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=STORAGE_PROVIDER=local
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3s
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dropx-backend
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable dropx-backend
+systemctl restart dropx-backend
+systemctl restart nginx
 
 echo "=== DropX EC2 Bootstrap Finished: $(date) ==="

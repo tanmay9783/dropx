@@ -27,6 +27,9 @@ jobs:
           npm ci
 
       - name: Run Backend Test Suite
+        env:
+          ALLOWED_ORIGINS: 'http://localhost:5173,http://127.0.0.1:5173'
+          NODE_ENV: 'test'
         run: |
           cd backend
           npm test

@@ -19,7 +19,7 @@ resource "aws_db_instance" "postgres" {
   skip_final_snapshot         = true
   deletion_protection         = false
   backup_retention_period     = 7
-  preferred_backup_window     = "03:00-04:00"
+  backup_window               = "03:00-04:00"
   allow_major_version_upgrade = false
 
   tags = {

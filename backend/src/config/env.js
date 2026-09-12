@@ -6,7 +6,7 @@ dotenv.config();
 const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  ALLOWED_ORIGINS: z.string().transform((val) => val.split(',').map((s) => s.trim())),
+  ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://127.0.0.1:5173').transform((val) => val.split(',').map((s) => s.trim())),
   ROOM_TTL_MINUTES: z.coerce.number().default(120),
   ROOM_CLEANUP_INTERVAL_MS: z.coerce.number().default(60000),
   MAX_FILE_SIZE_MB: z.coerce.number().default(100),

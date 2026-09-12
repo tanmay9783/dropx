@@ -98,7 +98,7 @@ async function clearRoomPresence(roomCode) {
 export function initSocketIo(httpServer) {
   io = new SocketIoServer(httpServer, {
     cors: {
-      origin: env.ALLOWED_ORIGINS,
+      origin: env.ALLOWED_ORIGINS.includes('*') ? '*' : env.ALLOWED_ORIGINS,
       credentials: true,
     },
     path: '/socket.io',

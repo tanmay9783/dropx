@@ -38,9 +38,11 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
     files,
     loading: filesLoading,
     uploading,
+    downloadingId,
     uploadProgress,
     error: fileError,
     handleUploadFiles,
+    handleDownloadFile,
     handleDeleteFile,
     addFileFromSocket,
     removeFileFromSocket,
@@ -236,9 +238,11 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           files={files}
           loading={filesLoading}
           uploading={uploading}
+          downloadingId={downloadingId}
           uploadProgress={uploadProgress}
           error={fileError}
           onUpload={handleUploadFiles}
+          onDownload={handleDownloadFile}
           onDelete={handleDeleteFile}
         />
 

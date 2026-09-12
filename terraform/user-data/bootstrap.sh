@@ -98,7 +98,10 @@ User=root
 WorkingDirectory=/opt/dropx/backend
 Environment=NODE_ENV=production
 Environment=PORT=3000
-Environment=STORAGE_PROVIDER=local
+Environment=STORAGE_PROVIDER=s3
+Environment=S3_BUCKET_NAME=dropx-prod-files-ap-south-1
+Environment=AWS_REGION=ap-south-1
+Environment=ALLOWED_ORIGINS=*
 ExecStart=/usr/bin/node src/server.js
 Restart=always
 RestartSec=3s

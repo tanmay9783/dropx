@@ -14,7 +14,7 @@ const envSchema = z.object({
   DOWNLOAD_URL_EXPIRY_SECONDS: z.coerce.number().default(300),
   DATABASE_URL: z.string().optional(),
   AWS_REGION: z.string().default('ap-south-1'),
-  S3_BUCKET_NAME: z.string().default('dropx-files-dev'),
+  S3_BUCKET_NAME: z.string().default('dropx-prod-files-ap-south-1'),
   STORAGE_PROVIDER: z.enum(['s3', 'local']).default('s3'),
   PENDING_FILE_TTL_MINUTES: z.coerce.number().default(30),
   MAX_FILES_PER_ROOM: z.coerce.number().default(20),

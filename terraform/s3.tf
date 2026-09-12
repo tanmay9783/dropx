@@ -72,3 +72,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "file_bucket_lifecycle" {
     }
   }
 }
+
+# S3 Bucket CORS Configuration for Direct Browser Presigned PUT Uploads and GET Downloads
+resource "aws_s3_bucket_cors_configuration" "file_bucket_cors" {
+  bucket = aws_s3_bucket.file_bucket.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT", "POST", "GET", "HEAD", "DELETE"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3600
+  }
+}
+

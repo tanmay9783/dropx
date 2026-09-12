@@ -24,41 +24,47 @@ APP_DIR="/opt/dropx"
 WEB_DIR="/var/www/dropx/frontend/dist"
 
 sudo mkdir -p "$APP_DIR" "$WEB_DIR"
-sudo chown -R ubuntu:ubuntu "$APP_DIR"
+sudo chown -R ubuntu:ubuntu "$APP_DIR" "$WEB_DIR"
 
-# 3. Pull repository code (if git target is set)
+# 3. Pull repository code
 if [ ! -d "$APP_DIR/.git" ]; then
-  git clone https://github.com/tanmay9783/dropx.git "$APP_DIR" || echo "Git clone skipped"
+  git clone https://github.com/tanmay9783/dropx.git "$APP_DIR"
+else
+  cd "$APP_DIR" && git pull origin main
 fi
 
 cd "$APP_DIR"
 
-# 4. Install backend dependencies and build frontend
+# 4. Install backend dependencies
 if [ -d "$APP_DIR/backend" ]; then
   cd "$APP_DIR/backend"
-  npm ci --omit=dev || npm install --omit=dev
+  mkdir -p data
+  npm install
 fi
 
+# 5. Build frontend static assets
 if [ -d "$APP_DIR/frontend" ]; then
   cd "$APP_DIR/frontend"
-  npm ci || npm install
+  npm install
   npm run build || echo "Frontend build failed"
-  sudo cp -r "$APP_DIR/frontend/dist/"* "$WEB_DIR/"
+  if [ -d "$APP_DIR/frontend/dist" ]; then
+    sudo cp -r "$APP_DIR/frontend/dist/"* "$WEB_DIR/"
+  fi
   sudo chown -R www-data:www-data /var/www/dropx
 fi
 
-# 5. Enable systemd service and Nginx
+# 6. Enable systemd service and Nginx
 if [ -f "$APP_DIR/aws/systemd/dropx-backend.service" ]; then
   sudo cp "$APP_DIR/aws/systemd/dropx-backend.service" /etc/systemd/system/
   sudo systemctl daemon-reload
   sudo systemctl enable dropx-backend
-  sudo systemctl restart dropx-backend || echo "Backend start delayed"
+  sudo systemctl restart dropx-backend
 fi
 
 if [ -f "$APP_DIR/aws/nginx/dropx.conf" ]; then
   sudo cp "$APP_DIR/aws/nginx/dropx.conf" /etc/nginx/sites-available/dropx.conf
   sudo ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/default
-  sudo nginx -t && sudo systemctl reload nginx || echo "Nginx reload delayed"
+  sudo nginx -t && sudo systemctl reload nginx
 fi
 
 echo "========================================="

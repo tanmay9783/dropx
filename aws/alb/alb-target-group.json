@@ -1,0 +1,18 @@
+{
+  "TargetGroupName": "dropx-prod-tg",
+  "Protocol": "HTTP",
+  "Port": 80,
+  "VpcId": "vpc-xxxxxxxx",
+  "TargetType": "instance",
+  "HealthCheckProtocol": "HTTP",
+  "HealthCheckPort": "80",
+  "HealthCheckPath": "/api/health",
+  "HealthCheckIntervalSeconds": 15,
+  "HealthCheckTimeoutSeconds": 5,
+  "HealthyThresholdCount": 2,
+  "UnhealthyThresholdCount": 3,
+  "Matcher": {
+    "HttpCode": "200"
+  },
+  "DeregistrationDelayTimeoutSeconds": 30
+}

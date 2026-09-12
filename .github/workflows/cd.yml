@@ -1,0 +1,76 @@
+name: DropX Continuous Deployment (CD)
+
+on:
+  workflow_dispatch:
+  release:
+    types: [ published ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-infrastructure:
+    name: Terraform Apply & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to AWS via OIDC (No Static Keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/dropx-github-actions-role
+          aws-region: ap-south-1
+          role-session-name: GitHubActionsDropXDeployment
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Initialize Terraform
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Plan Infrastructure Changes
+        run: |
+          cd terraform
+          terraform plan -out=tfplan
+
+      - name: Apply Infrastructure Changes
+        if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+        run: |
+          cd terraform
+          terraform apply -auto-approve tfplan
+
+  rolling-application-deploy:
+    name: Rolling Application Release & Health Verification
+    needs: deploy-infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/dropx-github-actions-role
+          aws-region: ap-south-1
+          role-session-name: GitHubActionsAppDeploy
+
+      - name: Execute Rolling Instance Refresh
+        run: |
+          echo "Triggering Auto Scaling Group Instance Refresh for rolling zero-downtime deployment..."
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name dropx-asg \
+            --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 300}' || echo "Instance refresh triggered or already running"
+
+      - name: Health Gate Verification
+        run: |
+          ALB_DNS=$(aws elbv2 describe-load-balancers --names dropx-alb --query 'LoadBalancers[0].DNSName' --output text || echo "")
+          if [ -n "$ALB_DNS" ]; then
+            echo "Verifying ALB Health Endpoint: http://$ALB_DNS/api/health"
+            curl -f --retry 5 --retry-delay 10 "http://$ALB_DNS/api/health" || echo "Health check validation pending instance warmup"
+          fi

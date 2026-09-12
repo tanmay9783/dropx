@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+dist/
+build/
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temporary uploads (for local development phase)
+backend/storage/uploads/*
+!backend/storage/uploads/.gitkeep
+backend/uploads/
+uploads/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+
+

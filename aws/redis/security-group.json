@@ -1,0 +1,17 @@
+{
+  "GroupName": "dropx-prod-redis-sg",
+  "Description": "Allow Redis 6379 ingress strictly from EC2 Application Security Group",
+  "IngressRules": [
+    {
+      "IpProtocol": "tcp",
+      "FromPort": 6379,
+      "ToPort": 6379,
+      "UserIdGroupPairs": [
+        {
+          "GroupId": "sg-xxxxxxxx_ec2_sg",
+          "Description": "Allow EC2 instances to connect to shared Redis"
+        }
+      ]
+    }
+  ]
+}

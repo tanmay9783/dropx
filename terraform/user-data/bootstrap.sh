@@ -37,9 +37,8 @@ cd "$APP_DIR"
 
 # 4. Link Nginx and Systemd service
 if [ -f "$APP_DIR/aws/nginx/dropx.conf" ]; then
+  sudo rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
   sudo cp "$APP_DIR/aws/nginx/dropx.conf" /etc/nginx/sites-available/dropx.conf
-  sudo rm -f /etc/nginx/sites-enabled/default
-  sudo ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/default
   sudo ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/dropx.conf
   sudo systemctl restart nginx
 fi

@@ -88,9 +88,9 @@ resource "aws_route_table_association" "public_az2" {
 
 # DB Subnet Group for Amazon RDS (Optional)
 resource "aws_db_subnet_group" "rds" {
-  count       = var.enable_rds ? 1 : 0
-  name        = "dropx-rds-subnet-group"
-  subnet_ids  = [aws_subnet.private_az1.id, aws_subnet.private_az2.id]
+  count      = var.enable_rds ? 1 : 0
+  name       = "dropx-rds-subnet-group"
+  subnet_ids = [aws_subnet.private_az1.id, aws_subnet.private_az2.id]
 
   tags = {
     Name = "dropx-rds-subnet-group"

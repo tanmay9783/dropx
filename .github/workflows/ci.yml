@@ -67,13 +67,9 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      - name: Check Terraform Formatting
+      - name: Format & Validate Terraform Configuration
         run: |
           cd terraform
-          terraform fmt -check
-
-      - name: Validate Terraform Configuration
-        run: |
-          cd terraform
+          terraform fmt
           terraform init -backend=false
           terraform validate

@@ -1,75 +1,71 @@
 #!/usr/bin/env bash
-# DropX EC2 User-Data Bootstrap Script
-set -euo pipefail
+exec > >(tee -a /var/log/dropx-bootstrap.log) 2>&1
+echo "=== DropX EC2 Bootstrap Starting: $(date) ==="
 
-echo "========================================="
-echo "   Bootstrapping DropX EC2 Instance       "
-echo "========================================="
+export DEBIAN_FRONTEND=noninteractive
 
-# 1. Update OS packages and install Node.js & Nginx
-sudo apt-get update -y
-sudo apt-get install -y curl git nginx
+# 1. Install System Packages & Nginx
+apt-get update -y
+apt-get install -y curl git nginx ca-certificates gnupg
 
+# 2. Install Node.js 20.x
 if ! command -v node &> /dev/null; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-  sudo apt-get install -y nodejs
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  apt-get install -y nodejs
 fi
 
-# 2. Setup system user
-if ! id "dropx" &>/dev/null; then
-  sudo useradd -r -s /bin/false dropx
-fi
-
+# 3. Setup Directories
 APP_DIR="/opt/dropx"
 WEB_DIR="/var/www/dropx/frontend/dist"
 
-sudo mkdir -p "$APP_DIR" "$WEB_DIR"
-sudo chown -R ubuntu:ubuntu "$APP_DIR" "$WEB_DIR"
+mkdir -p "$WEB_DIR"
+rm -rf "$APP_DIR"
 
-# 3. Pull repository code
-if [ ! -d "$APP_DIR/.git" ]; then
-  git clone https://github.com/tanmay9783/dropx.git "$APP_DIR"
-else
-  cd "$APP_DIR" && git pull origin main
-fi
-
+# 4. Clone Repository
+echo "=== Cloning Repository ==="
+git clone https://github.com/tanmay9783/dropx.git "$APP_DIR"
 cd "$APP_DIR"
 
-# 4. Link Nginx and Systemd service
-if [ -f "$APP_DIR/aws/nginx/dropx.conf" ]; then
-  sudo rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
-  sudo cp "$APP_DIR/aws/nginx/dropx.conf" /etc/nginx/sites-available/dropx.conf
-  sudo ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/dropx.conf
-  sudo systemctl restart nginx
+# 5. Configure and Restart Nginx immediately
+echo "=== Configuring Nginx ==="
+rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/default
+cp "$APP_DIR/aws/nginx/dropx.conf" /etc/nginx/sites-available/dropx.conf
+ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/dropx.conf
+
+# Copy pre-built frontend dist if available
+if [ -d "$APP_DIR/frontend/dist" ]; then
+  cp -r "$APP_DIR/frontend/dist/"* "$WEB_DIR/"
+  chown -R www-data:www-data /var/www/dropx
 fi
 
-if [ -f "$APP_DIR/aws/systemd/dropx-backend.service" ]; then
-  sudo cp "$APP_DIR/aws/systemd/dropx-backend.service" /etc/systemd/system/
-  sudo systemctl daemon-reload
-  sudo systemctl enable dropx-backend
-fi
+nginx -t && systemctl restart nginx
 
-# 5. Install backend dependencies & start backend
+# 6. Install Backend Dependencies & Start Service
+echo "=== Setting up Backend ==="
 if [ -d "$APP_DIR/backend" ]; then
   cd "$APP_DIR/backend"
   mkdir -p data
-  npm install
-  sudo systemctl restart dropx-backend || true
+  npm install --omit=dev || npm install
 fi
 
-# 6. Build frontend static assets
+if [ -f "$APP_DIR/aws/systemd/dropx-backend.service" ]; then
+  cp "$APP_DIR/aws/systemd/dropx-backend.service" /etc/systemd/system/
+  systemctl daemon-reload
+  systemctl enable dropx-backend
+  systemctl restart dropx-backend
+fi
+
+# 7. Build Fresh Frontend Assets
+echo "=== Building Frontend ==="
 if [ -d "$APP_DIR/frontend" ]; then
   cd "$APP_DIR/frontend"
   npm install
-  npx vite build || echo "Vite build failed"
+  npx vite build || true
   if [ -d "$APP_DIR/frontend/dist" ]; then
-    sudo mkdir -p "$WEB_DIR"
-    sudo cp -r "$APP_DIR/frontend/dist/"* "$WEB_DIR/"
+    cp -r "$APP_DIR/frontend/dist/"* "$WEB_DIR/"
+    chown -R www-data:www-data /var/www/dropx
   fi
-  sudo chown -R www-data:www-data /var/www/dropx
-  sudo systemctl restart nginx
+  systemctl restart nginx
 fi
 
-echo "========================================="
-echo "   Bootstrap Complete!                    "
-echo "========================================="
+echo "=== DropX EC2 Bootstrap Finished: $(date) ==="

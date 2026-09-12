@@ -22,12 +22,25 @@ echo "=== Cloning Repository ==="
 git clone https://github.com/tanmay9783/dropx.git "$APP_DIR"
 cd "$APP_DIR"
 
-# 4. Deploy React Frontend directly to /var/www/html and /var/www/dropx/frontend/dist
+# 4. Deploy React Frontend directly to /var/www/html
 echo "=== Deploying Frontend ==="
-rm -rf /var/www/html/*
-mkdir -p /var/www/dropx/frontend/dist /var/www/html
-cp -r "$APP_DIR/frontend/dist/"* /var/www/html/
-cp -r "$APP_DIR/frontend/dist/"* /var/www/dropx/frontend/dist/
+mkdir -p /var/www/html /var/www/dropx/frontend/dist
+
+# If pre-built dist exists, copy it immediately
+if [ -d "$APP_DIR/frontend/dist" ]; then
+  cp -rf "$APP_DIR/frontend/dist/"* /var/www/html/
+fi
+
+# Build frontend to ensure all assets are compiled
+cd "$APP_DIR/frontend"
+npm install
+npx vite build || true
+if [ -d "$APP_DIR/frontend/dist" ]; then
+  cp -rf "$APP_DIR/frontend/dist/"* /var/www/html/
+  cp -rf "$APP_DIR/frontend/dist/"* /var/www/dropx/frontend/dist/
+fi
+
+chmod -R 755 /var/www
 chown -R www-data:www-data /var/www/html /var/www/dropx
 
 # 5. Overwrite Nginx default configuration directly

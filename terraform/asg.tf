@@ -49,7 +49,7 @@ resource "aws_autoscaling_group" "app_asg" {
   min_size            = var.min_asg_size
   max_size            = var.max_asg_size
   desired_capacity    = var.desired_asg_capacity
-  vpc_zone_identifier = [aws_subnet.private_az1.id, aws_subnet.private_az2.id]
+  vpc_zone_identifier = [aws_subnet.public_az1.id, aws_subnet.public_az2.id]
   target_group_arns   = [aws_lb_target_group.app_tg.arn]
 
   launch_template {

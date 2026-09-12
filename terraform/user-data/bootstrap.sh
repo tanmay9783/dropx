@@ -28,7 +28,7 @@ sudo chown -R ubuntu:ubuntu "$APP_DIR"
 
 # 3. Pull repository code (if git target is set)
 if [ ! -d "$APP_DIR/.git" ]; then
-  git clone https://github.com/your-username/dropx.git "$APP_DIR" || echo "Git clone skipped"
+  git clone https://github.com/tanmay9783/dropx.git "$APP_DIR" || echo "Git clone skipped"
 fi
 
 cd "$APP_DIR"

@@ -74,7 +74,7 @@ variable "db_password" {
 variable "github_repo" {
   type        = string
   description = "GitHub repository (OWNER/REPO) for OIDC trust relationship"
-  default     = "your-username/dropx"
+  default     = "tanmay9783/dropx"
 }
 
 variable "admin_ip" {

@@ -1,7 +1,24 @@
+# Fetch the latest Ubuntu 22.04 LTS AMI automatically for current region
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"] # Canonical
+}
+
 # EC2 Launch Template for Multi-AZ Application Instances
 resource "aws_launch_template" "app_lt" {
   name_prefix   = "dropx-app-lt-"
-  image_id      = "ami-03f054457d840a28d" # Standard Ubuntu 22.04 LTS AMI in ap-south-1
+  image_id      = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
 
   iam_instance_profile {

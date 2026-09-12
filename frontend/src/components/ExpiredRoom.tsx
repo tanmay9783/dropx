@@ -1,5 +1,4 @@
-import React from 'react';
-import { Clock, Plus, ShieldX } from 'lucide-react';
+import { Clock, Plus, ShieldCheck } from 'lucide-react';
 
 interface ExpiredRoomProps {
   onCreateNew: () => void;
@@ -7,27 +6,31 @@ interface ExpiredRoomProps {
 
 export const ExpiredRoom: React.FC<ExpiredRoomProps> = ({ onCreateNew }) => {
   return (
-    <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-rose-900/50 shadow-2xl text-center">
-      <div className="h-16 w-16 rounded-2xl bg-rose-950/80 border border-rose-500/40 text-rose-400 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-rose-950/50">
-        <ShieldX className="w-8 h-8" />
+    <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 text-center shadow-2xl transition-colors duration-300">
+      <div className="h-16 w-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto mb-4 border border-amber-500/20 shadow-lg shadow-amber-500/10">
+        <Clock className="w-8 h-8" />
       </div>
 
-      <h2 className="text-2xl font-bold text-slate-100 mb-2">Room Expired</h2>
-      <p className="text-xs text-rose-300/80 font-medium mb-6">
-        This sharing session has ended.
+      <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 mb-2">
+        Session Expired
+      </h2>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+        This temporary sharing session has expired. To maintain privacy, all shared files and room metadata have been permanently purged from cloud storage.
       </p>
 
-      <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs text-slate-400 leading-relaxed mb-8">
-        <div className="flex items-center justify-center space-x-1.5 text-slate-300 font-semibold mb-2">
-          <Clock className="w-4 h-4 text-rose-400" />
-          <span>Automatic Session Cleanup</span>
+      <div className="mb-8 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-left">
+        <div className="flex items-center space-x-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-1">
+          <ShieldCheck className="w-4 h-4" />
+          <span>Zero-Trace Privacy Policy</span>
         </div>
-        All temporary files associated with this room will be deleted automatically.
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          No logs or leftover object bytes remain on the server or S3 bucket.
+        </p>
       </div>
 
       <button
         onClick={onCreateNew}
-        className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all"
+        className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all active:scale-95"
       >
         <Plus className="w-4 h-4" />
         <span>Create New Room</span>

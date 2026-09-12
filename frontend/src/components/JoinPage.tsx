@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Clock, LogIn, RefreshCw, ShieldAlert, ShieldX, Home } from 'lucide-react';
+import { ArrowLeft, Clock, LogIn, RefreshCw, ShieldAlert, ShieldX, Home, QrCode } from 'lucide-react';
 import { getRoom, joinRoom, RoomData, JoinRoomResponse } from '../services/api';
 import { useCountdownTimer } from '../hooks/useCountdownTimer';
 import { isValidRoomCode } from '../utils/validation';
@@ -84,24 +84,24 @@ export const JoinPage: React.FC<JoinPageProps> = ({
 
   if (loading) {
     return (
-      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-slate-800 text-center flex flex-col items-center">
-        <RefreshCw className="w-10 h-10 text-cyan-400 animate-spin mb-4" />
-        <h2 className="text-base font-bold text-slate-200">Verifying Room Code {cleanCode}...</h2>
+      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 text-center flex flex-col items-center shadow-2xl">
+        <RefreshCw className="w-10 h-10 text-cyan-500 animate-spin mb-4" />
+        <h2 className="text-base font-bold text-slate-800 dark:text-slate-200">Verifying Room Code {cleanCode}...</h2>
       </div>
     );
   }
 
   if (errorState === 'INVALID_CODE') {
     return (
-      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-rose-900/50 text-center">
-        <div className="h-14 w-14 rounded-2xl bg-rose-950/80 text-rose-400 flex items-center justify-center mx-auto mb-4 border border-rose-500/30">
+      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-rose-500/30 text-center shadow-2xl">
+        <div className="h-14 w-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
           <ShieldAlert className="w-7 h-7" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-100 mb-2">Invalid Room Code</h2>
-        <p className="text-xs text-slate-400 mb-6">{errorMessage || 'The room code format is invalid.'}</p>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Invalid Room Code</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">{errorMessage || 'The room code format is invalid.'}</p>
         <button
           onClick={onCancel}
-          className="w-full py-3 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm flex items-center justify-center space-x-2 border border-slate-700 transition-all"
+          className="w-full py-3 px-6 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-sm flex items-center justify-center space-x-2 border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
         >
           <Home className="w-4 h-4" />
           <span>Go Home</span>
@@ -112,17 +112,17 @@ export const JoinPage: React.FC<JoinPageProps> = ({
 
   if (errorState === 'NOT_FOUND') {
     return (
-      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-slate-800 text-center">
-        <div className="h-14 w-14 rounded-2xl bg-slate-900 text-slate-400 flex items-center justify-center mx-auto mb-4 border border-slate-800">
+      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 text-center shadow-2xl">
+        <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-900 text-slate-500 flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-slate-800">
           <ShieldAlert className="w-7 h-7" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-100 mb-2">Room Not Found</h2>
-        <p className="text-xs text-slate-400 mb-6">
-          This room does not exist or may have already been destroyed.
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Room Not Found</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+          This room does not exist or may have already expired and been cleaned up.
         </p>
         <button
           onClick={onCancel}
-          className="w-full py-3 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm flex items-center justify-center space-x-2 border border-slate-700 transition-all"
+          className="w-full py-3 px-6 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-sm flex items-center justify-center space-x-2 border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
         >
           <Home className="w-4 h-4" />
           <span>Go Home</span>
@@ -133,17 +133,17 @@ export const JoinPage: React.FC<JoinPageProps> = ({
 
   if (errorState === 'EXPIRED') {
     return (
-      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-rose-900/50 text-center">
-        <div className="h-14 w-14 rounded-2xl bg-rose-950/80 text-rose-400 flex items-center justify-center mx-auto mb-4 border border-rose-500/30">
+      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-rose-500/30 text-center shadow-2xl">
+        <div className="h-14 w-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
           <ShieldX className="w-7 h-7" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-100 mb-2">Room Expired</h2>
-        <p className="text-xs text-slate-400 mb-6">
-          This sharing session has ended. All temporary files associated with this room will be deleted automatically.
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Room Expired</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+          This sharing session has ended. All temporary files have been permanently purged from cloud storage.
         </p>
         <button
           onClick={onCreateNew}
-          className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all"
+          className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all active:scale-95"
         >
           <span>Create New Room</span>
         </button>
@@ -153,15 +153,15 @@ export const JoinPage: React.FC<JoinPageProps> = ({
 
   if (errorState === 'NETWORK_ERROR') {
     return (
-      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-amber-900/50 text-center">
-        <div className="h-14 w-14 rounded-2xl bg-amber-950/80 text-amber-400 flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
+      <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-amber-500/30 text-center shadow-2xl">
+        <div className="h-14 w-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
           <ShieldAlert className="w-7 h-7" />
         </div>
-        <h2 className="text-xl font-bold text-slate-100 mb-2">Connection Error</h2>
-        <p className="text-xs text-slate-400 mb-6">{errorMessage}</p>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">Connection Error</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">{errorMessage}</p>
         <button
           onClick={() => window.location.reload()}
-          className="w-full py-3 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm flex items-center justify-center space-x-2 border border-slate-700 transition-all"
+          className="w-full py-3 px-6 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-sm flex items-center justify-center space-x-2 border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
         >
           <RefreshCw className="w-4 h-4" />
           <span>Retry Connection</span>
@@ -171,55 +171,60 @@ export const JoinPage: React.FC<JoinPageProps> = ({
   }
 
   return (
-    <div className="max-w-md mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-2xl text-center">
-      <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
-        QR Join Invitation
+    <div className="max-w-md mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl text-center transition-colors duration-300">
+      <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 text-xs font-bold uppercase tracking-wider mb-2">
+        <QrCode className="w-3.5 h-3.5" />
+        <span>QR Invitation</span>
+      </div>
+
+      <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
+        Join Temporary Room
       </h2>
 
-      <div className="my-4 py-6 px-4 bg-slate-900/90 rounded-2xl border border-cyan-500/30">
-        <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider block mb-1">
+      <div className="my-5 py-5 px-4 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-cyan-500/30 shadow-inner">
+        <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider block mb-1">
           Room Code
         </span>
-        <span className="text-4xl font-black tracking-wider text-cyan-400 font-mono">
+        <span className="text-4xl font-black tracking-widest text-cyan-600 dark:text-cyan-400 font-mono">
           {cleanCode}
         </span>
       </div>
 
-      <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-6">
+      <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold mb-6">
         <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>This room is active</span>
+        <span>Session Active</span>
       </div>
 
       {/* Countdown timer */}
-      <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 mb-8 flex flex-col items-center justify-center">
-        <div className="flex items-center space-x-1.5 text-xs text-slate-400 mb-1">
-          <Clock className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Expires In</span>
+      <div className="bg-slate-100/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 mb-8 flex flex-col items-center justify-center">
+        <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+          <Clock className="w-3.5 h-3.5 text-cyan-500" />
+          <span>Session Expires In</span>
         </div>
-        <span className="text-xl font-bold font-mono text-cyan-400">
+        <span className="text-xl font-bold font-mono text-cyan-600 dark:text-cyan-400">
           {isExpired ? '00:00:00' : formattedTime}
         </span>
       </div>
 
       {errorMessage && (
-        <div className="mb-6 p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center space-x-2">
-          <ShieldAlert className="w-4 h-4 text-rose-400" />
+        <div className="mb-6 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs flex items-center justify-center space-x-2">
+          <ShieldAlert className="w-4 h-4 text-rose-500" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Action Buttons: Join Room & Cancel */}
+      {/* Action Buttons */}
       <div className="space-y-3">
         <button
           onClick={handleJoin}
           disabled={joining || isExpired}
-          className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-50"
+          className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-50 active:scale-95"
         >
           {joining ? (
-            <span>Joining Room...</span>
+            <span>Connecting...</span>
           ) : (
             <>
-              <span>Join Room</span>
+              <span>Join Session</span>
               <LogIn className="w-4 h-4" />
             </>
           )}
@@ -227,7 +232,7 @@ export const JoinPage: React.FC<JoinPageProps> = ({
 
         <button
           onClick={onCancel}
-          className="w-full py-3 px-6 rounded-xl glass-panel hover:bg-slate-800/80 text-slate-300 font-semibold text-xs flex items-center justify-center space-x-2 border border-slate-800 transition-all"
+          className="w-full py-3 px-6 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center justify-center space-x-2 border border-slate-200 dark:border-slate-800 transition-all active:scale-95"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Cancel</span>

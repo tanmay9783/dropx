@@ -1,10 +1,11 @@
 import React from 'react';
-import { ArrowLeft, Clock, ShieldCheck, Wifi, WifiOff, Users, Bell } from 'lucide-react';
+import { ArrowLeft, Clock, ShieldCheck, Wifi, WifiOff, Bell, Sparkles } from 'lucide-react';
 import { RoomData } from '../services/api';
 import { useCountdownTimer } from '../hooks/useCountdownTimer';
 import { useRoomSocket } from '../hooks/useRoomSocket';
 import { useRoomFiles } from '../hooks/useRoomFiles';
 import { SharedFiles } from './SharedFiles';
+import { ConnectedDevices } from './ConnectedDevices';
 
 interface ActiveRoomProps {
   room: RoomData;
@@ -43,7 +44,7 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
   });
 
   // Real-Time Socket Presence & File Events
-  const { status: socketStatus, participantCount, notifications } = useRoomSocket({
+  const { status: socketStatus, participantCount, participants, notifications } = useRoomSocket({
     roomCode: room.roomCode,
     socketToken,
     onRoomExpired: onExpire,
@@ -52,12 +53,12 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
   });
 
   return (
-    <div className="max-w-xl mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-2xl">
+    <div className="max-w-2xl mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl transition-colors duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800/80 pb-5 mb-6">
+      <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 pb-5 mb-6">
         <button
           onClick={onLeave}
-          className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+          className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Leave Room</span>
@@ -66,18 +67,18 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
         {/* Real-Time Socket Connection Badge */}
         <div className="flex items-center space-x-2">
           {socketStatus === 'CONNECTED' ? (
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
               <Wifi className="w-3.5 h-3.5" />
               <span>Real-Time Active</span>
             </div>
           ) : socketStatus === 'CONNECTING' ? (
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-950/60 border border-amber-500/30 text-amber-400 text-xs font-semibold">
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold">
               <Wifi className="w-3.5 h-3.5 animate-pulse" />
               <span>Connecting...</span>
             </div>
           ) : (
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-slate-400 text-xs font-semibold">
-              <WifiOff className="w-3.5 h-3.5 text-slate-500" />
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-500 text-xs font-semibold">
+              <WifiOff className="w-3.5 h-3.5" />
               <span>Offline</span>
             </div>
           )}
@@ -86,59 +87,62 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
 
       {/* Live Toast Notification Banner */}
       {notifications.length > 0 && (
-        <div className="mb-6 p-3 rounded-2xl bg-cyan-950/50 border border-cyan-500/30 text-cyan-300 text-xs flex items-center space-x-2.5 animate-fade-in">
-          <Bell className="w-4 h-4 text-cyan-400 flex-shrink-0 animate-bounce" />
-          <span className="font-medium">{notifications[0].message}</span>
+        <div className="mb-6 p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-xs flex items-center space-x-2.5 animate-fade-in">
+          <Bell className="w-4 h-4 text-cyan-500 flex-shrink-0 animate-bounce" />
+          <span className="font-semibold">{notifications[0].message}</span>
         </div>
       )}
 
       <div className="text-center">
-        <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
-          Connected to Room
+        <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Connected Guest Device</span>
+        </div>
+
+        <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
+          Connected to Room Session
         </h2>
 
-        <div className="my-4 py-6 px-4 bg-slate-900/90 rounded-2xl border border-emerald-500/30 flex items-center justify-center">
-          <span className="text-4xl sm:text-5xl font-black tracking-wider text-emerald-400 font-mono">
+        {/* Room Code Display */}
+        <div className="my-4 py-4 px-6 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-emerald-500/30 shadow-inner flex flex-col items-center justify-center">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">
+            Active Room Code
+          </span>
+          <span className="text-4xl sm:text-5xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 font-mono select-all">
             {room.roomCode}
           </span>
         </div>
 
         {/* Countdown & Connected Devices Grid */}
-        <div className="grid grid-cols-2 gap-4 my-6">
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
-            <div className="flex items-center space-x-1.5 text-xs text-slate-400 mb-1">
-              <Clock className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="grid grid-cols-2 gap-3 my-5">
+          <div className="bg-slate-100/70 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center">
+            <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <Clock className="w-3.5 h-3.5 text-emerald-500" />
               <span>Session Expires In</span>
             </div>
-            <span className="text-xl font-bold font-mono text-emerald-400">
+            <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
               {isExpired ? '00:00:00' : formattedTime}
             </span>
           </div>
 
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
-            <div className="flex items-center space-x-1.5 text-xs text-slate-400 mb-1">
-              <Users className="w-3.5 h-3.5 text-violet-400" />
-              <span>Connected Devices</span>
+          <div className="bg-slate-100/70 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center">
+            <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-500" />
+              <span>Direct Transfer</span>
             </div>
-            <span className="text-xl font-bold font-mono text-violet-400">
-              {participantCount} {participantCount === 1 ? '(You)' : 'Devices'}
+            <span className="text-xs font-bold font-mono text-cyan-600 dark:text-cyan-400">
+              Presigned Cloud S3
             </span>
           </div>
         </div>
 
-        {/* Status Box */}
-        <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800 text-slate-300 my-6">
-          <div className="h-10 w-10 rounded-full bg-slate-800 text-cyan-400 flex items-center justify-center mx-auto mb-3">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <h3 className="text-sm font-semibold mb-1">Room Session Active</h3>
-          <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto mb-3">
-            You are connected via secure real-time signaling. Select files below to transfer directly to other device(s).
-          </p>
-          <div className="text-[10px] font-mono text-slate-500 bg-slate-950/60 px-3 py-1 rounded-md inline-block">
-            Device Identity: {participantId.substring(0, 12)}...
-          </div>
-        </div>
+        {/* Live Connected Devices Avatars Card */}
+        <ConnectedDevices
+          participants={participants}
+          participantCount={participantCount}
+          currentParticipantId={participantId}
+          isOwner={false}
+        />
 
         {/* Shared Files Component */}
         <SharedFiles

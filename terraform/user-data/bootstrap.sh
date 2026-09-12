@@ -35,12 +35,13 @@ fi
 
 cd "$APP_DIR"
 
-# 4. Link Nginx and Systemd service immediately
+# 4. Link Nginx and Systemd service
 if [ -f "$APP_DIR/aws/nginx/dropx.conf" ]; then
   sudo cp "$APP_DIR/aws/nginx/dropx.conf" /etc/nginx/sites-available/dropx.conf
   sudo rm -f /etc/nginx/sites-enabled/default
+  sudo ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/default
   sudo ln -sf /etc/nginx/sites-available/dropx.conf /etc/nginx/sites-enabled/dropx.conf
-  sudo nginx -t && sudo systemctl reload nginx
+  sudo systemctl restart nginx
 fi
 
 if [ -f "$APP_DIR/aws/systemd/dropx-backend.service" ]; then
@@ -53,11 +54,11 @@ fi
 if [ -d "$APP_DIR/backend" ]; then
   cd "$APP_DIR/backend"
   mkdir -p data
-  npm install --omit=dev || npm install
+  npm install
   sudo systemctl restart dropx-backend || true
 fi
 
-# 6. Build frontend static assets (use lightweight vite build to avoid tsc OOM on t3.micro)
+# 6. Build frontend static assets
 if [ -d "$APP_DIR/frontend" ]; then
   cd "$APP_DIR/frontend"
   npm install
@@ -67,7 +68,7 @@ if [ -d "$APP_DIR/frontend" ]; then
     sudo cp -r "$APP_DIR/frontend/dist/"* "$WEB_DIR/"
   fi
   sudo chown -R www-data:www-data /var/www/dropx
-  sudo systemctl reload nginx
+  sudo systemctl restart nginx
 fi
 
 echo "========================================="

@@ -318,7 +318,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
               <span>Security Policy</span>
             </div>
             <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
-              AES-256 S3 Storage
+              Local Storage AES-256
             </span>
           </div>
         </div>
@@ -359,7 +359,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           className="w-full mt-8 py-3 px-6 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/30 text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all active:scale-95"
         >
           <Trash2 className="w-4 h-4" />
-          <span>{destroying ? 'Purging Room & S3 Data...' : 'Terminate Room & Delete Files'}</span>
+          <span>{destroying ? 'Purging Room & File Data...' : 'Terminate Room & Delete Files'}</span>
         </button>
       </div>
     </div>

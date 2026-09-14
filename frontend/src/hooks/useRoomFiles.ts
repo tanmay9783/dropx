@@ -65,7 +65,7 @@ export function useRoomFiles({ roomCode, socketToken }: UseRoomFilesOptions) {
     }
   };
 
-  // Handle S3 presigned URL file download
+  // Handle local storage file download
   const handleDownloadFile = async (fileId: string) => {
     if (!roomCode || !socketToken) return;
     setDownloadingId(fileId);

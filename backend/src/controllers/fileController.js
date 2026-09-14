@@ -21,6 +21,17 @@ export const fileController = {
     }
   },
 
+  async uploadFileContent(req, res, next) {
+    try {
+      const { roomCode, fileId } = req.params;
+      const buffer = req.body;
+      await fileService.uploadFileContent({ roomCode, fileId, buffer });
+      res.status(200).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async completeUpload(req, res, next) {
     try {
       const { roomCode, fileId } = req.params;
@@ -54,6 +65,17 @@ export const fileController = {
       const { roomCode, fileId } = req.params;
       const result = await fileService.requestDownloadUrl({ roomCode, fileId });
       res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async downloadFile(req, res, next) {
+    try {
+      const { roomCode, fileId } = req.params;
+      const { filePath, originalName, mimeType } = await fileService.getDownloadFile({ roomCode, fileId });
+      res.setHeader('Content-Type', mimeType || 'application/octet-stream');
+      res.download(filePath, originalName);
     } catch (err) {
       next(err);
     }

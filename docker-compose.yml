@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  dropx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dropx-app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - ALLOWED_ORIGINS=*
+      - STORAGE_PROVIDER=local
+      - LOCAL_STORAGE_DIR=/app/data/uploads
+      - ROOM_TTL_MINUTES=120
+      - MAX_FILE_SIZE_MB=100
+    volumes:
+      - dropx_data:/app/data
+
+volumes:
+  dropx_data:

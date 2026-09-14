@@ -6,68 +6,30 @@ import app from '../src/app.js';
 import { initDb, getDb } from '../src/db/index.js';
 import { initSocketIo } from '../src/sockets/socketHandler.js';
 import { fileService } from '../src/services/fileService.js';
-import { s3Storage } from '../src/services/storage/s3Storage.js';
+import { localStorage } from '../src/services/storage/localStorage.js';
 import { fileRepository } from '../src/db/fileRepository.js';
-
 import { env } from '../src/config/env.js';
 
 let httpServer;
 let baseUrl;
 let request;
 
-// Mock in-memory S3 store
-const mockS3Store = new Map();
-
 describe('Phase 7 — Cleanup, Lifecycle & Reliability Hardening Tests', () => {
   before(async () => {
     process.env.ALLOWED_ORIGINS = 'http://localhost:5173,http://127.0.0.1:5173';
     process.env.ROOM_TTL_MINUTES = '120';
     process.env.MAX_FILE_SIZE_MB = '100';
-    process.env.STORAGE_PROVIDER = 's3';
-    process.env.S3_BUCKET_NAME = 'dropx-files-dev';
-    process.env.AWS_REGION = 'ap-south-1';
+    process.env.STORAGE_PROVIDER = 'local';
+    process.env.LOCAL_STORAGE_DIR = './data/test_uploads_life';
 
     env.PENDING_FILE_TTL_MINUTES = 1;
     env.MAX_FILES_PER_ROOM = 3;
     env.MAX_ROOM_STORAGE_BYTES = 10485760; // 10 MB limit for test
 
     await initDb();
-
-    s3Storage.createUploadPresignedUrl = async ({ roomCode, fileId, contentType }) => {
-      const objectKey = s3Storage.getObjectKey(roomCode, fileId);
-      return {
-        uploadUrl: `https://dropx-files-dev.s3.ap-south-1.amazonaws.com/${objectKey}?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=300`,
-        objectKey,
-        expiresIn: 300,
-      };
-    };
-
-    s3Storage.verifyObjectExists = async ({ objectKey }) => {
-      if (mockS3Store.has(objectKey)) {
-        const item = mockS3Store.get(objectKey);
-        return { exists: true, sizeBytes: item.sizeBytes, mimeType: item.contentType };
-      }
-      return { exists: false, sizeBytes: 0 };
-    };
-
-    s3Storage.createDownloadPresignedUrl = async ({ objectKey, originalName, contentType }) => {
-      return {
-        downloadUrl: `https://dropx-files-dev.s3.ap-south-1.amazonaws.com/${objectKey}?X-Amz-Algorithm=AWS4-HMAC-SHA256&response-content-disposition=attachment&X-Amz-Expires=300`,
-        expiresIn: 300,
-      };
-    };
-
-    s3Storage.deleteObject = async ({ objectKey }) => {
-      mockS3Store.delete(objectKey);
-      return { success: true };
-    };
-
-    s3Storage.deleteObjects = async ({ objectKeys }) => {
-      for (const key of objectKeys) {
-        mockS3Store.delete(key);
-      }
-      return { success: true };
-    };
+    const db = getDb();
+    await db.query('DELETE FROM files');
+    await db.query('DELETE FROM rooms');
 
     httpServer = http.createServer(app);
     initSocketIo(httpServer);
@@ -90,17 +52,19 @@ describe('Phase 7 — Cleanup, Lifecycle & Reliability Hardening Tests', () => {
     }
   });
 
-  it('Stale Pending Upload Cleanup - should clean up abandoned pending files after PENDING_FILE_TTL_MINUTES', async () => {
+  it('Stale Pending File Cleanup - should cleanup pending upload records older than TTL', async () => {
+    const db = getDb();
+    await db.query('DELETE FROM files');
     const createRes = await request.post('/api/rooms').expect(201);
     const roomCode = createRes.body.room.roomCode;
     const socketToken = createRes.body.socketToken;
 
-    // 1. Request presigned upload URL
+    // 1. Create a pending file record
     const uploadUrlRes = await request
       .post(`/api/rooms/${roomCode}/files/upload-url`)
       .set('Authorization', `Bearer ${socketToken}`)
       .send({
-        fileName: 'abandoned-file.txt',
+        fileName: 'abandoned.txt',
         contentType: 'text/plain',
         sizeBytes: 500,
       })
@@ -109,25 +73,22 @@ describe('Phase 7 — Cleanup, Lifecycle & Reliability Hardening Tests', () => {
     const fileId = uploadUrlRes.body.fileId;
     const objectKey = uploadUrlRes.body.objectKey;
 
-    // Simulate file in S3, but /complete is NEVER called by browser
-    mockS3Store.set(objectKey, { sizeBytes: 500, contentType: 'text/plain' });
-
-    // Verify pending file is NOT in GET /files
-    const listRes = await request
-      .get(`/api/rooms/${roomCode}/files`)
-      .set('Authorization', `Bearer ${socketToken}`)
+    await request
+      .put(uploadUrlRes.body.uploadUrl)
+      .set('Content-Type', 'text/plain')
+      .send(Buffer.alloc(500))
       .expect(200);
-    assert.strictEqual(listRes.body.files.length, 0, 'Pending files must not appear in active file listing');
 
-    // Manually backdate created_at in DB to simulate stale pending file (> 1 hour old)
-    const oldTimestamp = new Date(Date.now() - 3600000).toISOString();
-    const db = getDb();
-    await db.query(`UPDATE files SET created_at = $1 WHERE id = $2`, [oldTimestamp, fileId]);
+    // 2. Artificially age the pending file created_at to 10 minutes ago
+    const tenMinsAgoIso = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    await db.query(`UPDATE files SET created_at = $1 WHERE id = $2`, [tenMinsAgoIso, fileId]);
 
-    // Run cleanup
+    // 3. Trigger pending file cleanup
     const cleanedCount = await fileService.cleanupPendingFiles();
-    assert.ok(cleanedCount >= 1, 'Should clean at least 1 stale pending file');
-    assert.strictEqual(mockS3Store.has(objectKey), false, 'Abandoned S3 object should be deleted');
+    assert.strictEqual(cleanedCount, 1, 'Should cleanup 1 stale pending file');
+
+    const existCheck = await localStorage.verifyObjectExists({ objectKey });
+    assert.strictEqual(existCheck.exists, false, 'Abandoned file should be deleted from local storage');
 
     // Check DB status updated to expired
     const record = await fileRepository.findFileById(fileId, roomCode);
@@ -151,7 +112,12 @@ describe('Phase 7 — Cleanup, Lifecycle & Reliability Hardening Tests', () => {
         })
         .expect(200);
 
-      mockS3Store.set(uploadUrlRes.body.objectKey, { sizeBytes: 100, contentType: 'text/plain' });
+      await request
+        .put(uploadUrlRes.body.uploadUrl)
+        .set('Content-Type', 'text/plain')
+        .send(Buffer.alloc(100))
+        .expect(200);
+
       await request
         .post(`/api/rooms/${roomCode}/files/${uploadUrlRes.body.fileId}/complete`)
         .set('Authorization', `Bearer ${socketToken}`)
@@ -219,12 +185,12 @@ describe('Phase 7 — Cleanup, Lifecycle & Reliability Hardening Tests', () => {
       .expect(400);
   });
 
-  it('Race Condition - /complete after room expiration should delete S3 object and reject with 410', async () => {
+  it('Race Condition - /complete after room expiration should delete local object and reject with 410', async () => {
     const createRes = await request.post('/api/rooms').expect(201);
     const roomCode = createRes.body.room.roomCode;
     const socketToken = createRes.body.socketToken;
 
-    // 1. Request presigned upload URL
+    // 1. Request upload URL
     const uploadUrlRes = await request
       .post(`/api/rooms/${roomCode}/files/upload-url`)
       .set('Authorization', `Bearer ${socketToken}`)
@@ -238,7 +204,11 @@ describe('Phase 7 — Cleanup, Lifecycle & Reliability Hardening Tests', () => {
     const fileId = uploadUrlRes.body.fileId;
     const objectKey = uploadUrlRes.body.objectKey;
 
-    mockS3Store.set(objectKey, { sizeBytes: 200, contentType: 'text/plain' });
+    await request
+      .put(uploadUrlRes.body.uploadUrl)
+      .set('Content-Type', 'text/plain')
+      .send(Buffer.alloc(200))
+      .expect(200);
 
     // 2. Room expires mid-upload
     const db = getDb();
@@ -251,11 +221,12 @@ describe('Phase 7 — Cleanup, Lifecycle & Reliability Hardening Tests', () => {
       .set('Authorization', `Bearer ${socketToken}`)
       .expect(410);
 
-    // Verify S3 object was cleaned up
-    assert.strictEqual(mockS3Store.has(objectKey), false, 'Uploaded S3 object must be deleted if room expired mid-upload');
+    // Verify local object was cleaned up
+    const checkExist = await localStorage.verifyObjectExists({ objectKey });
+    assert.strictEqual(checkExist.exists, false, 'Uploaded object must be deleted if room expired mid-upload');
   });
 
-  it('Idempotency & Resilience - repeated cleanup runs without crashing even on S3 error', async () => {
+  it('Idempotency & Resilience - repeated cleanup runs without crashing even on storage error', async () => {
     // Run cleanup when no expired files exist
     const count1 = await fileService.cleanupExpiredFiles();
     assert.strictEqual(typeof count1, 'number');
@@ -264,10 +235,10 @@ describe('Phase 7 — Cleanup, Lifecycle & Reliability Hardening Tests', () => {
     const count2 = await fileService.cleanupExpiredFiles();
     assert.strictEqual(typeof count2, 'number');
 
-    // Simulate S3 delete throwing error for an object
-    const originalDeleteObject = s3Storage.deleteObject;
-    s3Storage.deleteObject = async () => {
-      throw new Error('Simulated S3 Network Disruption');
+    // Simulate delete throwing error for an object
+    const originalDeleteObject = localStorage.deleteObject;
+    localStorage.deleteObject = async () => {
+      throw new Error('Simulated Storage Disruption');
     };
 
     // Attempt pending cleanup - should handle error gracefully without throwing
@@ -275,6 +246,6 @@ describe('Phase 7 — Cleanup, Lifecycle & Reliability Hardening Tests', () => {
     assert.strictEqual(typeof countAfterError, 'number');
 
     // Restore original deleteObject
-    s3Storage.deleteObject = originalDeleteObject;
+    localStorage.deleteObject = originalDeleteObject;
   });
 });

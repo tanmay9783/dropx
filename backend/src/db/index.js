@@ -52,7 +52,7 @@ export async function initDb() {
         size_bytes BIGINT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'pending',
-        storage_provider VARCHAR(20) NOT NULL DEFAULT 's3'
+        storage_provider VARCHAR(20) NOT NULL DEFAULT 'local'
       );
       CREATE INDEX IF NOT EXISTS idx_files_room_code ON files(room_code);
       CREATE INDEX IF NOT EXISTS idx_files_status ON files(status);
@@ -112,8 +112,6 @@ export async function initDb() {
       CREATE INDEX IF NOT EXISTS idx_rooms_expires_at ON rooms(expires_at);
       CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
 
-      DROP TABLE IF EXISTS files;
-
       CREATE TABLE IF NOT EXISTS files (
         id TEXT PRIMARY KEY,
         room_code TEXT NOT NULL,
@@ -124,7 +122,7 @@ export async function initDb() {
         size_bytes INTEGER NOT NULL,
         created_at TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending',
-        storage_provider TEXT NOT NULL DEFAULT 's3'
+        storage_provider TEXT NOT NULL DEFAULT 'local'
       );
       CREATE INDEX IF NOT EXISTS idx_files_room_code ON files(room_code);
       CREATE INDEX IF NOT EXISTS idx_files_status ON files(status);

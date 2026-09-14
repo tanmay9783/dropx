@@ -110,7 +110,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
             </span>
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Zero-knowledge direct S3 presigned file transfers with automatic session expiration.
+            Zero-knowledge high-speed local file transfers with automatic session expiration.
           </p>
         </div>
 
@@ -153,7 +153,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
         </div>
 
         <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">
-          {uploading ? 'Uploading to S3 Cloud Storage...' : 'Drop files here or click to browse'}
+          {uploading ? 'Uploading to High-Speed Local Storage...' : 'Drop files here or click to browse'}
         </h4>
         <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mb-3">
           Photos, videos, PDFs, and documents up to 100MB per file.
@@ -161,7 +161,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
 
         <div className="flex items-center space-x-2 text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Encrypted Direct-to-S3 Upload</span>
+          <span>Encrypted Direct File Upload</span>
         </div>
       </div>
 

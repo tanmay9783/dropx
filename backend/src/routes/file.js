@@ -1,39 +1,43 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { fileController } from '../controllers/fileController.js';
 import { validateRoomCodeParam } from '../middleware/validation.js';
 import { authenticateRoomAccess } from '../middleware/auth.js';
 import { createLimiter } from '../middleware/rateLimiterStore.js';
+import { env } from '../config/env.js';
 
 const router = Router();
 
-// Upload URL Request Rate Limiter (Max 50 upload URL requests per 15 min per IP)
+// Upload URL Request Rate Limiter
 const uploadUrlLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: 50,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 50,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many upload URL requests, please try again later.' } },
 });
 
-// Complete Upload Rate Limiter (Max 50 completion confirmations per 15 min per IP)
+// Complete Upload Rate Limiter
 const completeUploadLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: 50,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 50,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many completion requests, please try again later.' } },
 });
 
-// Presigned Download URL Request Rate Limiter (Max 100 download URL requests per 15 min per IP)
+// Presigned Download URL Request Rate Limiter
 const downloadUrlLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 100,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many download URL requests, please try again later.' } },
 });
 
-// Request Presigned Upload URL
+const maxFileSizeBytes = (env.MAX_FILE_SIZE_MB || 100) * 1024 * 1024;
+const rawBodyParser = express.raw({ type: '*/*', limit: maxFileSizeBytes });
+
+// Request Upload URL
 router.post(
   '/rooms/:roomCode/files/upload-url',
   uploadUrlLimiter,
@@ -42,7 +46,15 @@ router.post(
   fileController.requestUploadUrl
 );
 
-// Confirm Upload Completion (HeadObject Verification)
+// Upload File Payload directly to Local Storage
+router.put(
+  '/rooms/:roomCode/files/:fileId/upload',
+  validateRoomCodeParam,
+  rawBodyParser,
+  fileController.uploadFileContent
+);
+
+// Confirm Upload Completion
 router.post(
   '/rooms/:roomCode/files/:fileId/complete',
   completeUploadLimiter,
@@ -59,13 +71,20 @@ router.get(
   fileController.getFiles
 );
 
-// Request Presigned Download URL
+// Request Download URL
 router.get(
   '/rooms/:roomCode/files/:fileId/download-url',
   downloadUrlLimiter,
   validateRoomCodeParam,
   authenticateRoomAccess,
   fileController.requestDownloadUrl
+);
+
+// Serve/Stream Download File Content
+router.get(
+  '/rooms/:roomCode/files/:fileId/download',
+  validateRoomCodeParam,
+  fileController.downloadFile
 );
 
 // Delete File

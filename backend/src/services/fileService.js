@@ -2,14 +2,14 @@ import path from 'node:path';
 import { env } from '../config/env.js';
 import { fileRepository } from '../db/fileRepository.js';
 import { roomService } from './roomService.js';
-import { s3Storage } from './storage/s3Storage.js';
+import { localStorage } from './storage/localStorage.js';
 import { generateUuid } from '../utils/crypto.js';
 import { createError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 
 export const fileService = {
   /**
-   * Authorizes file upload and generates an S3 presigned PUT URL.
+   * Authorizes file upload and generates a local upload URL.
    */
   async requestUploadUrl({ roomCode, participantId, fileName, contentType, sizeBytes }) {
     // 1. Verify room exists and is active
@@ -41,7 +41,7 @@ export const fileService = {
 
     // Enforce MAX_FILES_PER_ROOM limit
     const nonTerminalCount = await fileRepository.countNonTerminalFilesByRoom(roomCode);
-    if (nonTerminalCount >= env.MAX_FILES_PER_ROOM) {
+    if (nonTerminalCount >= (env.MAX_FILES_PER_ROOM || 20)) {
       throw createError(
         'ROOM_FILE_LIMIT_EXCEEDED',
         `Room has reached the maximum allowed limit of ${env.MAX_FILES_PER_ROOM} files.`,
@@ -62,8 +62,8 @@ export const fileService = {
     const fileId = generateUuid();
     const cleanContentType = contentType || 'application/octet-stream';
 
-    // 2. Generate S3 presigned PUT URL
-    const { uploadUrl, objectKey, expiresIn } = await s3Storage.createUploadPresignedUrl({
+    // 2. Generate local upload URL
+    const { uploadUrl, objectKey, expiresIn } = await localStorage.createUploadPresignedUrl({
       roomCode,
       fileId,
       contentType: cleanContentType,
@@ -81,7 +81,7 @@ export const fileService = {
       sizeBytes,
       createdAt,
       status: 'pending',
-      storageProvider: 's3',
+      storageProvider: 'local',
     });
 
     return {
@@ -93,17 +93,30 @@ export const fileService = {
   },
 
   /**
-   * Verifies S3 upload completion using HeadObject and updates DB record to 'active'.
+   * Saves uploaded binary payload to local storage.
+   */
+  async uploadFileContent({ roomCode, fileId, buffer }) {
+    await roomService.getRoom(roomCode);
+    const record = await fileRepository.findFileById(fileId, roomCode);
+    if (!record) {
+      throw createError('FILE_NOT_FOUND', 'Upload metadata not found', 404);
+    }
+    const { sizeBytes } = await localStorage.saveFile({ objectKey: record.objectKey, buffer });
+    return { success: true, sizeBytes };
+  },
+
+  /**
+   * Verifies local file completion and updates DB record to 'active'.
    */
   async completeUpload({ roomCode, fileId, participantId, role }) {
     // Re-verify room validity (handles race condition where room expired mid-upload)
     try {
       await roomService.getRoom(roomCode);
     } catch (roomErr) {
-      // If room has expired, clean up uploaded S3 object immediately if record exists
+      // If room has expired, clean up uploaded file immediately if record exists
       const record = await fileRepository.findFileById(fileId, roomCode);
       if (record) {
-        await s3Storage.deleteObject({ objectKey: record.objectKey });
+        await localStorage.deleteObject({ objectKey: record.objectKey });
         await fileRepository.updateFileStatus(fileId, 'expired');
       }
       throw roomErr;
@@ -120,10 +133,10 @@ export const fileService = {
       throw createError('FORBIDDEN', 'You are not authorized to complete this upload', 403);
     }
 
-    // Verify object in S3 via HeadObject
-    const head = await s3Storage.verifyObjectExists({ objectKey: record.objectKey });
+    // Verify object exists on local disk
+    const head = await localStorage.verifyObjectExists({ objectKey: record.objectKey });
     if (!head.exists) {
-      throw createError('UPLOAD_NOT_FOUND', 'Uploaded S3 object was not found', 404);
+      throw createError('UPLOAD_NOT_FOUND', 'Uploaded file object was not found', 404);
     }
 
     const actualSize = head.sizeBytes || record.sizeBytes;
@@ -173,7 +186,7 @@ export const fileService = {
   },
 
   /**
-   * Generates a short-lived presigned GET URL for direct browser download from S3.
+   * Generates local download URL.
    */
   async requestDownloadUrl({ roomCode, fileId }) {
     await roomService.getRoom(roomCode);
@@ -183,7 +196,9 @@ export const fileService = {
       throw createError('FILE_NOT_FOUND', 'File not found or has expired', 404);
     }
 
-    const { downloadUrl, expiresIn } = await s3Storage.createDownloadPresignedUrl({
+    const { downloadUrl, expiresIn } = await localStorage.createDownloadPresignedUrl({
+      roomCode,
+      fileId,
       objectKey: record.objectKey,
       originalName: record.originalName,
       contentType: record.mimeType,
@@ -197,8 +212,32 @@ export const fileService = {
   },
 
   /**
-   * Delete a shared file from S3 and database according to Option C policy:
-   * Owner can delete any file in room; participant can delete only their own uploaded file.
+   * Retrieves local filesystem path and metadata for streaming download.
+   */
+  async getDownloadFile({ roomCode, fileId }) {
+    await roomService.getRoom(roomCode);
+    const record = await fileRepository.findFileById(fileId, roomCode);
+
+    if (!record || record.status !== 'active') {
+      throw createError('FILE_NOT_FOUND', 'File not found or has expired', 404);
+    }
+
+    const filePath = localStorage.getFilePath(record.objectKey);
+    const stat = await localStorage.verifyObjectExists({ objectKey: record.objectKey });
+    if (!stat.exists) {
+      throw createError('FILE_NOT_FOUND', 'File content missing from storage', 404);
+    }
+
+    return {
+      filePath,
+      originalName: record.originalName,
+      mimeType: record.mimeType,
+      sizeBytes: stat.sizeBytes,
+    };
+  },
+
+  /**
+   * Delete a shared file from local storage and database.
    */
   async deleteFile({ roomCode, fileId, participantId, role }) {
     await roomService.getRoom(roomCode);
@@ -208,13 +247,13 @@ export const fileService = {
       throw createError('FILE_NOT_FOUND', 'File not found or already deleted', 404);
     }
 
-    // Option C authorization policy check
+    // Authorization policy check
     if (role !== 'owner' && participantId && record.participantId !== participantId) {
       throw createError('FORBIDDEN', 'Only the file uploader or room owner can delete this file', 403);
     }
 
-    // Delete S3 object
-    await s3Storage.deleteObject({ objectKey: record.objectKey });
+    // Delete local file object
+    await localStorage.deleteObject({ objectKey: record.objectKey });
 
     // Mark status in DB
     await fileRepository.updateFileStatus(fileId, 'deleted');
@@ -244,9 +283,9 @@ export const fileService = {
 
       for (const item of stalePendingFiles) {
         try {
-          await s3Storage.deleteObject({ objectKey: item.objectKey });
+          await localStorage.deleteObject({ objectKey: item.objectKey });
         } catch (err) {
-          logger.warn({ errMessage: err.message, fileId: item.id }, 'Pending file S3 deletion failed during cleanup');
+          logger.warn({ errMessage: err.message, fileId: item.id }, 'Pending file deletion failed during cleanup');
         }
         await fileRepository.updateFileStatus(item.id, 'expired');
       }
@@ -260,7 +299,7 @@ export const fileService = {
   },
 
   /**
-   * Cleanup S3 objects and metadata for expired rooms and stale pending uploads.
+   * Cleanup local files and metadata for expired rooms and stale pending uploads.
    */
   async cleanupExpiredFiles() {
     try {
@@ -270,13 +309,13 @@ export const fileService = {
       if (expiredFiles && expiredFiles.length > 0) {
         const objectKeys = expiredFiles.map((f) => f.objectKey);
         try {
-          await s3Storage.deleteObjects({ objectKeys });
+          await localStorage.deleteObjects({ objectKeys });
           filesDeletedCount = expiredFiles.length;
-        } catch (s3Err) {
-          logger.warn({ errMessage: s3Err.message }, 'Batch S3 delete failed, falling back to individual deletes');
+        } catch (err) {
+          logger.warn({ errMessage: err.message }, 'Batch delete failed, falling back to individual deletes');
           for (const item of expiredFiles) {
             try {
-              await s3Storage.deleteObject({ objectKey: item.objectKey });
+              await localStorage.deleteObject({ objectKey: item.objectKey });
               filesDeletedCount++;
             } catch (_) {}
           }
@@ -293,7 +332,7 @@ export const fileService = {
       const totalCleaned = filesDeletedCount + pendingExpiredCount;
       return totalCleaned;
     } catch (err) {
-      logger.error({ errMessage: err.message }, 'Error during S3 expired file cleanup');
+      logger.error({ errMessage: err.message }, 'Error during local expired file cleanup');
       return 0;
     }
   },

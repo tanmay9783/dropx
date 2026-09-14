@@ -63,6 +63,18 @@ app.use('/api', healthRoutes);
 app.use('/api', roomRoutes);
 app.use('/api', fileRoutes);
 
+import path from 'node:path';
+import fs from 'node:fs';
+
+const frontendDist = path.resolve(process.cwd(), '../frontend/dist');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
+
 // 404 Handler
 app.use((_req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });

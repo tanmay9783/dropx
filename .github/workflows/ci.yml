@@ -57,22 +57,3 @@ jobs:
         run: |
           cd frontend
           npm run build
-
-  terraform-check:
-    name: Terraform Format & Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.7
-
-      - name: Format & Validate Terraform Configuration
-        run: |
-          cd terraform
-          terraform fmt
-          terraform init -backend=false
-          terraform validate

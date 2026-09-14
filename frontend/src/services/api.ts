@@ -144,7 +144,7 @@ export async function requestUploadUrl(
   return data;
 }
 
-export async function uploadToS3(
+export async function uploadFileStorage(
   uploadUrl: string,
   file: File,
   onProgress?: (percent: number) => void
@@ -167,17 +167,19 @@ export async function uploadToS3(
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
       } else {
-        reject(new Error(`S3 upload failed with status ${xhr.status}`));
+        reject(new Error(`File upload failed with status ${xhr.status}`));
       }
     };
 
     xhr.onerror = () => {
-      reject(new Error('Network error during S3 file upload'));
+      reject(new Error('Network error during file upload'));
     };
 
     xhr.send(file);
   });
 }
+
+export const uploadToS3 = uploadFileStorage;
 
 export async function completeUpload(
   roomCode: string,

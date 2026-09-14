@@ -178,7 +178,7 @@ export const App: React.FC = () => {
 
             {/* Hero Description */}
             <p className="text-base sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mb-10 leading-relaxed font-normal">
-              Create an encrypted temporary room, scan the QR code from any smartphone or laptop, and transfer files directly through high-speed S3 cloud storage with automated session cleanup.
+              Create an encrypted temporary room, scan the QR code from any smartphone or laptop, and transfer files directly through high-speed local storage with automated session cleanup.
             </p>
 
             {createError && (
@@ -227,10 +227,10 @@ export const App: React.FC = () => {
                   <Cloud className="w-6 h-6" />
                 </div>
                 <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100 mb-2">
-                  Direct S3 Presigned Speed
+                  High-Speed Transfer
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Files upload directly from the browser to Amazon S3 via authenticated presigned PUT URLs up to 100MB per file.
+                  Files upload directly to high-speed local disk storage via secure streams up to 100MB per file.
                 </p>
               </div>
 
@@ -243,7 +243,7 @@ export const App: React.FC = () => {
                   Zero-Trace Auto Cleanup
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Rooms automatically expire after their lifespan. S3 storage objects and metadata are purged with zero leftover traces.
+                  Rooms automatically expire after their lifespan. Storage files and metadata are purged with zero leftover traces.
                 </p>
               </div>
             </div>
@@ -252,15 +252,15 @@ export const App: React.FC = () => {
             <div className="mt-10 py-4 px-6 rounded-2xl glass-panel-subtle border border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-around gap-6 w-full text-xs text-slate-600 dark:text-slate-400 font-mono">
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-cyan-500" />
-                <span>AWS ALB Multi-AZ</span>
+                <span>Self-Hosted Core</span>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>SSE-S3 AES-256</span>
+                <span>Local Storage AES-256</span>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-violet-500" />
-                <span>Socket.IO Redis Mesh</span>
+                <span>Socket.IO Real-Time Engine</span>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-amber-500" />
@@ -279,7 +279,7 @@ export const App: React.FC = () => {
               Generating Secure Session...
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Allocating private temporary S3 bucket space & cryptographic room keys.
+              Allocating private temporary storage space & cryptographic room keys.
             </p>
           </div>
         )}
@@ -329,12 +329,12 @@ export const App: React.FC = () => {
       {/* Footer */}
       <footer className="max-w-6xl mx-auto w-full pt-8 border-t border-slate-200/80 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-4">
         <div className="flex items-center space-x-2">
-          <span className="font-bold text-slate-700 dark:text-slate-300">DropX Cloud Platform</span>
+          <span className="font-bold text-slate-700 dark:text-slate-300">DropX Platform</span>
           <span>•</span>
-          <span>College Evaluation Edition</span>
+          <span>Self-Hosted Edition</span>
         </div>
         <div className="flex items-center space-x-4 font-mono text-[11px]">
-          <span>Direct Presigned S3</span>
+          <span>High-Speed Local Storage</span>
           <span>•</span>
           <span>Zero File Persistence</span>
         </div>

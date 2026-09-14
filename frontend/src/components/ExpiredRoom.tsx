@@ -24,7 +24,7 @@ export const ExpiredRoom: React.FC<ExpiredRoomProps> = ({ onCreateNew }) => {
           <span>Zero-Trace Privacy Policy</span>
         </div>
         <p className="text-[11px] text-slate-500 dark:text-slate-400">
-          No logs or leftover object bytes remain on the server or S3 bucket.
+          No logs or leftover file bytes remain on the server or storage directory.
         </p>
       </div>
 

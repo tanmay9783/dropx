@@ -3,56 +3,22 @@ import assert from 'node:assert';
 import http from 'node:http';
 import supertest from 'supertest';
 import app from '../src/app.js';
-import { initDb, getDb } from '../src/db/index.js';
+import { initDb } from '../src/db/index.js';
 import { initSocketIo } from '../src/sockets/socketHandler.js';
-import { s3Storage } from '../src/services/storage/s3Storage.js';
-import { generateSocketToken } from '../src/utils/token.js';
+import { localStorage } from '../src/services/storage/localStorage.js';
 
 let httpServer;
 let baseUrl;
 let request;
 
-// Mock in-memory S3 store
-const mockS3Store = new Map();
-
 describe('Phase 8 — Security Hardening & Threat-Model Validation Tests', () => {
   before(async () => {
     process.env.ALLOWED_ORIGINS = 'http://localhost:5173,http://127.0.0.1:5173';
     process.env.ROOM_TTL_MINUTES = '120';
-    process.env.STORAGE_PROVIDER = 's3';
-    process.env.S3_BUCKET_NAME = 'dropx-files-dev';
-    process.env.AWS_REGION = 'ap-south-1';
+    process.env.STORAGE_PROVIDER = 'local';
+    process.env.LOCAL_STORAGE_DIR = './data/test_uploads_sec';
 
     await initDb();
-
-    s3Storage.createUploadPresignedUrl = async ({ roomCode, fileId, contentType }) => {
-      const objectKey = s3Storage.getObjectKey(roomCode, fileId);
-      return {
-        uploadUrl: `https://dropx-files-dev.s3.ap-south-1.amazonaws.com/${objectKey}?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=300`,
-        objectKey,
-        expiresIn: 300,
-      };
-    };
-
-    s3Storage.verifyObjectExists = async ({ objectKey }) => {
-      if (mockS3Store.has(objectKey)) {
-        const item = mockS3Store.get(objectKey);
-        return { exists: true, sizeBytes: item.sizeBytes, mimeType: item.contentType };
-      }
-      return { exists: false, sizeBytes: 0 };
-    };
-
-    s3Storage.createDownloadPresignedUrl = async ({ objectKey, originalName, contentType }) => {
-      return {
-        downloadUrl: `https://dropx-files-dev.s3.ap-south-1.amazonaws.com/${objectKey}?X-Amz-Algorithm=AWS4-HMAC-SHA256&response-content-disposition=attachment&X-Amz-Expires=300`,
-        expiresIn: 300,
-      };
-    };
-
-    s3Storage.deleteObject = async ({ objectKey }) => {
-      mockS3Store.delete(objectKey);
-      return { success: true };
-    };
 
     httpServer = http.createServer(app);
     initSocketIo(httpServer);
@@ -112,7 +78,13 @@ describe('Phase 8 — Security Hardening & Threat-Model Validation Tests', () =>
       .expect(200);
 
     const fileIdB = uploadBRes.body.fileId;
-    mockS3Store.set(uploadBRes.body.objectKey, { sizeBytes: 1024, contentType: 'application/pdf' });
+    const uploadUrlB = uploadBRes.body.uploadUrl;
+
+    await request
+      .put(uploadUrlB)
+      .set('Content-Type', 'application/pdf')
+      .send(Buffer.alloc(1024))
+      .expect(200);
 
     await request
       .post(`/api/rooms/${roomBCode}/files/${fileIdB}/complete`)
@@ -141,7 +113,6 @@ describe('Phase 8 — Security Hardening & Threat-Model Validation Tests', () =>
   it('Delete Authorization Policy (Option C) - participant cannot delete another participant file; owner can delete any file', async () => {
     const roomRes = await request.post('/api/rooms').expect(201);
     const roomCode = roomRes.body.room.roomCode;
-    const ownerSocketToken = roomRes.body.socketToken;
 
     // Participant 1 joins room
     const join1 = await request.post(`/api/rooms/${roomCode}/join`).expect(200);
@@ -159,7 +130,13 @@ describe('Phase 8 — Security Hardening & Threat-Model Validation Tests', () =>
       .expect(200);
 
     const fileId = uploadRes.body.fileId;
-    mockS3Store.set(uploadRes.body.objectKey, { sizeBytes: 500, contentType: 'text/plain' });
+    const uploadUrl = uploadRes.body.uploadUrl;
+
+    await request
+      .put(uploadUrl)
+      .set('Content-Type', 'text/plain')
+      .send(Buffer.alloc(500))
+      .expect(200);
 
     await request
       .post(`/api/rooms/${roomCode}/files/${fileId}/complete`)
@@ -217,7 +194,11 @@ describe('Phase 8 — Security Hardening & Threat-Model Validation Tests', () =>
       })
       .expect(200);
 
-    mockS3Store.set(res.body.objectKey, { sizeBytes: 100, contentType: 'text/plain' });
+    await request
+      .put(res.body.uploadUrl)
+      .set('Content-Type', 'text/plain')
+      .send(Buffer.alloc(100))
+      .expect(200);
 
     const completeRes = await request
       .post(`/api/rooms/${roomCode}/files/${res.body.fileId}/complete`)
@@ -250,7 +231,7 @@ describe('Phase 8 — Security Hardening & Threat-Model Validation Tests', () =>
     // Verify ownerToken is 64 hex chars
     assert.strictEqual(ownerToken.length, 64);
 
-    // Verify socketToken payload contains roomCode and participantId, but NOT ownerToken or AWS keys
+    // Verify socketToken payload contains roomCode and participantId, but NOT ownerToken or secret keys
     const { verifySocketToken } = await import('../src/utils/token.js');
     const payload = verifySocketToken(socketToken);
 

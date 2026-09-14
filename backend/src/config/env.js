@@ -13,9 +13,8 @@ const envSchema = z.object({
   UPLOAD_URL_EXPIRY_SECONDS: z.coerce.number().default(300),
   DOWNLOAD_URL_EXPIRY_SECONDS: z.coerce.number().default(300),
   DATABASE_URL: z.string().optional(),
-  AWS_REGION: z.string().default('ap-south-1'),
-  S3_BUCKET_NAME: z.string().default('dropx-prod-files-ap-south-1'),
-  STORAGE_PROVIDER: z.enum(['s3', 'local']).default('s3'),
+  STORAGE_PROVIDER: z.enum(['local']).default('local'),
+  LOCAL_STORAGE_DIR: z.string().default('./data/uploads'),
   PENDING_FILE_TTL_MINUTES: z.coerce.number().default(30),
   MAX_FILES_PER_ROOM: z.coerce.number().default(20),
   MAX_ROOM_STORAGE_BYTES: z.coerce.number().default(524288000),
@@ -35,4 +34,4 @@ if (!_env.success) {
   process.exit(1);
 }
 
-export const env = _env.data;
+export const env = { ..._env.data };

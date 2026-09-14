@@ -131,7 +131,7 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
               <span>Direct Transfer</span>
             </div>
             <span className="text-xs font-bold font-mono text-cyan-600 dark:text-cyan-400">
-              Presigned Cloud S3
+              Local High-Speed Storage
             </span>
           </div>
         </div>

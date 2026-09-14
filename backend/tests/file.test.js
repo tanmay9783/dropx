@@ -7,62 +7,21 @@ import app from '../src/app.js';
 import { initDb, getDb } from '../src/db/index.js';
 import { initSocketIo } from '../src/sockets/socketHandler.js';
 import { fileService } from '../src/services/fileService.js';
-import { s3Storage } from '../src/services/storage/s3Storage.js';
+import { localStorage } from '../src/services/storage/localStorage.js';
 
 let httpServer;
 let baseUrl;
 let request;
 
-// Mock S3 in-memory store for integration test
-const mockS3Store = new Map();
-
-describe('S3 File Transfer Integration Tests', () => {
+describe('Local Storage File Transfer Integration Tests', () => {
   before(async () => {
     process.env.ALLOWED_ORIGINS = 'http://localhost:5173,http://127.0.0.1:5173';
     process.env.ROOM_TTL_MINUTES = '120';
     process.env.MAX_FILE_SIZE_MB = '100';
-    process.env.STORAGE_PROVIDER = 's3';
-    process.env.S3_BUCKET_NAME = 'dropx-files-dev';
-    process.env.AWS_REGION = 'ap-south-1';
+    process.env.STORAGE_PROVIDER = 'local';
+    process.env.LOCAL_STORAGE_DIR = './data/test_uploads_file';
 
     await initDb();
-
-    // Mock s3Storage methods for testing
-    s3Storage.createUploadPresignedUrl = async ({ roomCode, fileId, contentType }) => {
-      const objectKey = s3Storage.getObjectKey(roomCode, fileId);
-      return {
-        uploadUrl: `https://dropx-files-dev.s3.ap-south-1.amazonaws.com/${objectKey}?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=300`,
-        objectKey,
-        expiresIn: 300,
-      };
-    };
-
-    s3Storage.verifyObjectExists = async ({ objectKey }) => {
-      if (mockS3Store.has(objectKey)) {
-        const item = mockS3Store.get(objectKey);
-        return { exists: true, sizeBytes: item.sizeBytes, mimeType: item.contentType };
-      }
-      return { exists: false, sizeBytes: 0 };
-    };
-
-    s3Storage.createDownloadPresignedUrl = async ({ objectKey, originalName, contentType }) => {
-      return {
-        downloadUrl: `https://dropx-files-dev.s3.ap-south-1.amazonaws.com/${objectKey}?X-Amz-Algorithm=AWS4-HMAC-SHA256&response-content-disposition=attachment&X-Amz-Expires=300`,
-        expiresIn: 300,
-      };
-    };
-
-    s3Storage.deleteObject = async ({ objectKey }) => {
-      mockS3Store.delete(objectKey);
-      return { success: true };
-    };
-
-    s3Storage.deleteObjects = async ({ objectKeys }) => {
-      for (const key of objectKeys) {
-        mockS3Store.delete(key);
-      }
-      return { success: true };
-    };
 
     httpServer = http.createServer(app);
     initSocketIo(httpServer);
@@ -85,7 +44,7 @@ describe('S3 File Transfer Integration Tests', () => {
     }
   });
 
-  it('File Presigned Upload & Download Flow - Request upload URL, complete upload, fetch download URL, and delete', async () => {
+  it('File Upload & Download Flow - Request upload URL, PUT upload content, complete upload, fetch download URL, and delete', async () => {
     // 1. Create Room
     const createRes = await request.post('/api/rooms').expect(201);
     const roomCode = createRes.body.room.roomCode;
@@ -103,7 +62,7 @@ describe('S3 File Transfer Integration Tests', () => {
     });
 
     // 2. Request Upload URL
-    const testContent = 'DropX Phase 6 S3 presigned URL test content';
+    const testContent = 'DropX Local Storage test content';
     const uploadUrlRes = await request
       .post(`/api/rooms/${roomCode}/files/upload-url`)
       .set('Authorization', `Bearer ${socketToken}`)
@@ -117,13 +76,15 @@ describe('S3 File Transfer Integration Tests', () => {
     assert.ok(uploadUrlRes.body.uploadUrl);
     assert.ok(uploadUrlRes.body.fileId);
     const fileId = uploadUrlRes.body.fileId;
+    const uploadUrl = uploadUrlRes.body.uploadUrl;
     const objectKey = uploadUrlRes.body.objectKey;
 
-    // Simulate direct browser S3 PUT upload
-    mockS3Store.set(objectKey, {
-      sizeBytes: Buffer.from(testContent).length,
-      contentType: 'text/plain',
-    });
+    // Direct local PUT upload
+    await request
+      .put(uploadUrl)
+      .set('Content-Type', 'text/plain')
+      .send(Buffer.from(testContent))
+      .expect(200);
 
     // 3. Complete Upload
     const completeRes = await request
@@ -207,7 +168,7 @@ describe('S3 File Transfer Integration Tests', () => {
       .expect(403);
   });
 
-  it('Room Expiration Cleanup - should remove S3 objects when room expires', async () => {
+  it('Room Expiration Cleanup - should remove local files when room expires', async () => {
     const createRes = await request.post('/api/rooms').expect(201);
     const roomCode = createRes.body.room.roomCode;
     const socketToken = createRes.body.socketToken;
@@ -224,9 +185,14 @@ describe('S3 File Transfer Integration Tests', () => {
       .expect(200);
 
     const fileId = uploadUrlRes.body.fileId;
+    const uploadUrl = uploadUrlRes.body.uploadUrl;
     const objectKey = uploadUrlRes.body.objectKey;
 
-    mockS3Store.set(objectKey, { sizeBytes: 100, contentType: 'text/plain' });
+    await request
+      .put(uploadUrl)
+      .set('Content-Type', 'text/plain')
+      .send(Buffer.alloc(100))
+      .expect(200);
 
     // Complete upload
     await request
@@ -234,7 +200,8 @@ describe('S3 File Transfer Integration Tests', () => {
       .set('Authorization', `Bearer ${socketToken}`)
       .expect(200);
 
-    assert.ok(mockS3Store.has(objectKey), 'S3 object should exist after upload completion');
+    const checkExistBefore = await localStorage.verifyObjectExists({ objectKey });
+    assert.strictEqual(checkExistBefore.exists, true, 'Local object should exist after upload completion');
 
     // Expire room in DB
     const pastIso = new Date(Date.now() - 10000).toISOString();
@@ -243,9 +210,10 @@ describe('S3 File Transfer Integration Tests', () => {
 
     // Run file cleanup
     const cleanedCount = await fileService.cleanupExpiredFiles();
-    assert.ok(cleanedCount >= 1, 'Cleanup should delete expired S3 object');
+    assert.ok(cleanedCount >= 1, 'Cleanup should delete expired local object');
 
-    assert.strictEqual(mockS3Store.has(objectKey), false, 'S3 object should be removed from storage');
+    const checkExistAfter = await localStorage.verifyObjectExists({ objectKey });
+    assert.strictEqual(checkExistAfter.exists, false, 'Local object should be removed from storage');
 
     // Request download URL attempt should fail with 410 ROOM_EXPIRED
     await request

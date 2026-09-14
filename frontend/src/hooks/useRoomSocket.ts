@@ -22,6 +22,8 @@ interface UseRoomSocketOptions {
   onRoomExpired?: () => void;
   onFileUploaded?: (file: SharedFile) => void;
   onFileDeleted?: (fileId: string) => void;
+  onSnippetCreated?: (snippet: any) => void;
+  onSnippetDeleted?: (snippetId: string) => void;
 }
 
 export function useRoomSocket({
@@ -30,6 +32,8 @@ export function useRoomSocket({
   onRoomExpired,
   onFileUploaded,
   onFileDeleted,
+  onSnippetCreated,
+  onSnippetDeleted,
 }: UseRoomSocketOptions) {
   const [status, setStatus] = useState<SocketStatus>('DISCONNECTED');
   const [participantCount, setParticipantCount] = useState<number>(1);
@@ -117,6 +121,19 @@ export function useRoomSocket({
       }
     });
 
+    socket.on('snippet:created', (snippet: any) => {
+      addNotification('New text snippet shared', 'info');
+      if (onSnippetCreated) {
+        onSnippetCreated(snippet);
+      }
+    });
+
+    socket.on('snippet:deleted', (data: { id: string }) => {
+      if (onSnippetDeleted) {
+        onSnippetDeleted(data.id);
+      }
+    });
+
     socket.on('room-expired', () => {
       addNotification('This sharing room has expired', 'warn');
       if (onRoomExpired) {
@@ -133,6 +150,8 @@ export function useRoomSocket({
       socket.off('user-left');
       socket.off('file-uploaded');
       socket.off('file-deleted');
+      socket.off('snippet:created');
+      socket.off('snippet:deleted');
       socket.off('room-expired');
       socket.disconnect();
       socketRef.current = null;

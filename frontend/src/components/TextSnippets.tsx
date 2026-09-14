@@ -7,9 +7,11 @@ interface TextSnippetsProps {
   roomCode: string;
   socketToken: string;
   roomKey?: string | null;
+  newSnippet?: any;
+  deletedSnippetId?: string | null;
 }
 
-export const TextSnippets: React.FC<TextSnippetsProps> = ({ roomCode, socketToken, roomKey }) => {
+export const TextSnippets: React.FC<TextSnippetsProps> = ({ roomCode, socketToken, roomKey, newSnippet, deletedSnippetId }) => {
   const [snippets, setSnippets] = useState<TextSnippet[]>([]);
   const [inputContent, setInputContent] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,6 +34,24 @@ export const TextSnippets: React.FC<TextSnippetsProps> = ({ roomCode, socketToke
   useEffect(() => {
     fetchRoomSnippets();
   }, [roomCode, socketToken]);
+
+  // Sync incoming real-time socket events
+  useEffect(() => {
+    if (newSnippet) {
+      setSnippets((prev) => {
+        if (!prev.find((s) => s.id === newSnippet.id)) {
+          return [...prev, newSnippet];
+        }
+        return prev;
+      });
+    }
+  }, [newSnippet]);
+
+  useEffect(() => {
+    if (deletedSnippetId) {
+      setSnippets((prev) => prev.filter((s) => s.id !== deletedSnippetId));
+    }
+  }, [deletedSnippetId]);
 
   // Decrypt snippets if E2EE roomKey is provided
   useEffect(() => {

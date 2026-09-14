@@ -26,6 +26,8 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
 }) => {
   // Extract key from URL fragment #key=... if available
   const [roomKey, setRoomKey] = React.useState<string | null>(propRoomKey || null);
+  const [newSnippet, setNewSnippet] = React.useState<any>(null);
+  const [deletedSnippetId, setDeletedSnippetId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!roomKey && typeof window !== 'undefined' && window.location.hash) {
@@ -67,6 +69,8 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     onRoomExpired: onExpire,
     onFileUploaded: addFileFromSocket,
     onFileDeleted: removeFileFromSocket,
+    onSnippetCreated: setNewSnippet,
+    onSnippetDeleted: setDeletedSnippetId,
   });
 
   return (
@@ -178,6 +182,8 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
           onUpload={handleUploadFiles}
           onDownload={handleDownloadFile}
           onDelete={handleDeleteFile}
+          newSnippet={newSnippet}
+          deletedSnippetId={deletedSnippetId}
         />
       </div>
     </div>

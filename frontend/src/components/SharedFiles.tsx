@@ -35,6 +35,8 @@ interface SharedFilesProps {
   onUpload: (files: FileList | File[]) => void;
   onDownload?: (fileId: string) => void;
   onDelete: (fileId: string) => void;
+  newSnippet?: any;
+  deletedSnippetId?: string | null;
 }
 
 export const SharedFiles: React.FC<SharedFilesProps> = ({
@@ -53,6 +55,8 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
   onUpload,
   onDownload,
   onDelete,
+  newSnippet,
+  deletedSnippetId,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
@@ -244,6 +248,8 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
           roomCode={roomCode}
           socketToken={socketToken}
           roomKey={roomKey}
+          newSnippet={newSnippet}
+          deletedSnippetId={deletedSnippetId}
         />
       )}
 

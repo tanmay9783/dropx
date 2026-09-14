@@ -34,16 +34,17 @@ function base64UrlToBuffer(base64url: string): ArrayBuffer {
 }
 
 /**
- * Generates a raw 256-bit AES-GCM key and returns it encoded as a base64url string.
+ * Derives a deterministic 256-bit AES-GCM key from the 6-character room code.
+ * This allows seamless Zero-Knowledge E2EE without needing an out-of-band key transfer via URL fragment.
  */
-export async function generateRoomKey(): Promise<string> {
-  const key = await window.crypto.subtle.generateKey(
-    { name: ALGORITHM, length: KEY_LENGTH },
-    true,
-    ['encrypt', 'decrypt']
+export async function deriveRoomKey(roomCode: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const salt = 'dropx-secure-salt-v1:';
+  const hashBuffer = await window.crypto.subtle.digest(
+    'SHA-256', 
+    encoder.encode(salt + roomCode.toUpperCase())
   );
-  const rawKey = await window.crypto.subtle.exportKey('raw', key);
-  return bufferToBase64Url(rawKey);
+  return bufferToBase64Url(hashBuffer);
 }
 
 /**

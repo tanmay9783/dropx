@@ -25,7 +25,7 @@ import { useRoomFiles } from '../hooks/useRoomFiles';
 import { SharedFiles } from './SharedFiles';
 import { ConnectedDevices } from './ConnectedDevices';
 import { getJoinUrl } from '../utils/validation';
-import { generateRoomKey } from '../utils/crypto';
+import { deriveRoomKey } from '../utils/crypto';
 
 interface CreateRoomProps {
   room: RoomData;
@@ -53,10 +53,10 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
   const qrRef = useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    generateRoomKey().then(setRoomKey);
-  }, []);
+    deriveRoomKey(room.roomCode).then(setRoomKey);
+  }, [room.roomCode]);
 
-  const joinUrl = getJoinUrl(room.roomCode, roomKey || undefined);
+  const joinUrl = getJoinUrl(room.roomCode);
   const { formattedTime, isExpired } = useCountdownTimer(room.expiresAt, onExpire);
 
   // File Transfer Hook

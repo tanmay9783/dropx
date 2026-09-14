@@ -16,6 +16,8 @@ interface ActiveRoomProps {
   onLeave: () => void;
 }
 
+import { deriveRoomKey } from '../utils/crypto';
+
 export const ActiveRoom: React.FC<ActiveRoomProps> = ({
   room,
   participantId,
@@ -24,19 +26,16 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
   onExpire,
   onLeave,
 }) => {
-  // Extract key from URL fragment #key=... if available
+  // Use provided key or derive from room code
   const [roomKey, setRoomKey] = React.useState<string | null>(propRoomKey || null);
   const [newSnippet, setNewSnippet] = React.useState<any>(null);
   const [deletedSnippetId, setDeletedSnippetId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!roomKey && typeof window !== 'undefined' && window.location.hash) {
-      const match = window.location.hash.match(/key=([^&]+)/);
-      if (match && match[1]) {
-        setRoomKey(match[1]);
-      }
+    if (!roomKey) {
+      deriveRoomKey(room.roomCode).then(setRoomKey);
     }
-  }, [roomKey]);
+  }, [roomKey, room.roomCode]);
 
   const { formattedTime, isExpired } = useCountdownTimer(room.expiresAt, onExpire);
 

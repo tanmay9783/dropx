@@ -30,7 +30,7 @@ export const ExpiredRoom: React.FC<ExpiredRoomProps> = ({ onCreateNew }) => {
 
       <button
         onClick={onCreateNew}
-        className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all active:scale-95"
+        className="w-full py-3.5 px-6 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold flex items-center justify-center space-x-2 shadow-lg shadow-yellow-500/20 transition-all active:scale-95"
       >
         <Plus className="w-4 h-4" />
         <span>Create New Room</span>

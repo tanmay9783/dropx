@@ -28,12 +28,12 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
       ];
 
   const getDeviceIcon = (p: ParticipantInfo) => {
-    if (p.role === 'owner') return <Crown className="w-4 h-4 text-amber-400" />;
+    if (p.role === 'owner') return <Crown className="w-4 h-4 text-yellow-400" />;
     const name = (p.deviceName || '').toLowerCase();
     if (name.includes('iphone') || name.includes('ipad') || name.includes('phone') || name.includes('android') || name.includes('samsung') || name.includes('pixel') || name.includes('xiaomi') || name.includes('moto')) {
-      return <Smartphone className="w-4 h-4 text-cyan-400" />;
+      return <Smartphone className="w-4 h-4 text-yellow-400" />;
     }
-    return <Laptop className="w-4 h-4 text-violet-400" />;
+    return <Laptop className="w-4 h-4 text-yellow-400/80" />;
   };
 
   const getDeviceLabel = (p: ParticipantInfo) => {
@@ -45,14 +45,14 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
     <div className="w-full glass-panel-subtle rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800/80 my-4 text-left">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-500 dark:text-cyan-400">
+          <div className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-400">
             <Users className="w-4 h-4" />
           </div>
           <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             Connected Devices
           </span>
         </div>
-        <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-mono font-semibold border border-cyan-500/20">
+        <span className="text-xs px-2.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 font-mono font-semibold border border-yellow-500/20">
           {participantCount} Active
         </span>
       </div>
@@ -65,7 +65,7 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
               key={p.id || idx}
               className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${
                 isCurrent
-                  ? 'bg-cyan-500/5 dark:bg-cyan-950/40 border-cyan-500/30 shadow-sm shadow-cyan-500/10'
+                  ? 'bg-yellow-500/5 dark:bg-yellow-950/20 border-yellow-500/30 shadow-sm shadow-yellow-500/10'
                   : 'bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800/60'
               }`}
             >
@@ -79,20 +79,20 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
                       {getDeviceLabel(p)}
                     </span>
                     {isCurrent && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500 text-slate-950 font-extrabold uppercase">
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-yellow-400 text-slate-950 font-extrabold uppercase">
                         You
                       </span>
                     )}
                   </div>
                   <div className="flex items-center space-x-1 text-[10px] text-slate-500 dark:text-slate-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
                     <span>Real-time connected</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center space-x-1 text-slate-400">
-                <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                <Wifi className="w-3.5 h-3.5 text-yellow-400" />
               </div>
             </div>
           );

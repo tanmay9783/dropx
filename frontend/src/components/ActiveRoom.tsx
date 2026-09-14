@@ -108,51 +108,51 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
 
       {/* Live Toast Notification Banner */}
       {notifications.length > 0 && (
-        <div className="mb-6 p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-xs flex items-center space-x-2.5 animate-fade-in">
-          <Bell className="w-4 h-4 text-cyan-500 flex-shrink-0 animate-bounce" />
+        <div className="mb-6 p-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-xs flex items-center space-x-2.5 animate-fade-in">
+          <Bell className="w-4 h-4 text-yellow-400 flex-shrink-0 animate-bounce" />
           <span className="font-semibold">{notifications[0].message}</span>
         </div>
       )}
 
       <div className="text-center">
-        <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+        <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-bold uppercase tracking-wider mb-2 border border-yellow-500/20">
           <Sparkles className="w-3.5 h-3.5" />
           <span>Connected Guest Device</span>
         </div>
 
-        <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
-          Connected to Room Session
+        <h2 className="text-2xl font-black text-white">
+          Active Room Session
         </h2>
 
         {/* Room Code Display */}
-        <div className="my-4 py-4 px-6 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-emerald-500/30 shadow-inner flex flex-col items-center justify-center">
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">
+        <div className="my-4 py-3.5 px-6 bg-slate-900/90 rounded-2xl border border-yellow-500/40 shadow-inner flex flex-col items-center justify-center">
+          <span className="text-[11px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">
             Active Room Code
           </span>
-          <span className="text-4xl sm:text-5xl font-black tracking-widest text-emerald-600 dark:text-emerald-400 font-mono select-all">
+          <span className="text-4xl sm:text-5xl font-black tracking-widest text-yellow-400 font-mono select-all">
             {room.roomCode}
           </span>
         </div>
 
-        {/* Countdown & Connected Devices Grid */}
+        {/* Countdown & Security Grid */}
         <div className="grid grid-cols-2 gap-3 my-5">
-          <div className="bg-slate-100/70 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center">
-            <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
-              <Clock className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Session Expires In</span>
+          <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center">
+            <div className="flex items-center space-x-1.5 text-xs text-slate-400 mb-1">
+              <Clock className="w-3.5 h-3.5 text-yellow-400" />
+              <span>Expires In</span>
             </div>
-            <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+            <span className="text-xl font-bold font-mono text-yellow-400">
               {isExpired ? '00:00:00' : formattedTime}
             </span>
           </div>
 
-          <div className="bg-slate-100/70 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center">
-            <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-500" />
+          <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 flex flex-col items-center justify-center">
+            <div className="flex items-center space-x-1.5 text-xs text-slate-400 mb-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>Direct Transfer</span>
             </div>
-            <span className="text-xs font-bold font-mono text-cyan-600 dark:text-cyan-400">
-              Local High-Speed Storage
+            <span className="text-xs font-bold font-mono text-emerald-400">
+              Encrypted Local Session
             </span>
           </div>
         </div>

@@ -58,7 +58,7 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
       </button>
 
       <div className="text-center mb-8">
-        <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center mx-auto mb-3">
+        <div className="h-12 w-12 rounded-2xl bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center justify-center mx-auto mb-3">
           <KeyRound className="w-6 h-6" />
         </div>
         <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 mb-1">
@@ -80,7 +80,7 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
             onChange={handleInputChange}
             placeholder="X7K9P2"
             maxLength={6}
-            className="w-full py-4 text-center text-3xl font-black font-mono tracking-widest bg-slate-50 dark:bg-slate-900/90 border-2 border-slate-200 dark:border-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 rounded-2xl text-cyan-600 dark:text-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none uppercase transition-all shadow-inner"
+            className="w-full py-4 text-center text-3xl font-black font-mono tracking-widest bg-slate-50 dark:bg-slate-900/90 border-2 border-slate-200 dark:border-slate-700 focus:border-yellow-400 dark:focus:border-yellow-400 rounded-2xl text-yellow-400 placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none uppercase transition-all shadow-inner"
             autoFocus
           />
         </div>
@@ -95,7 +95,7 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
         <button
           type="submit"
           disabled={loading || code.length !== 6}
-          className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+          className="w-full py-3.5 px-6 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold flex items-center justify-center space-x-2 shadow-lg shadow-yellow-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
         >
           {loading ? (
             <span>Connecting to Room...</span>

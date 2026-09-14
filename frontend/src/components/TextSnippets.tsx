@@ -135,46 +135,46 @@ export const TextSnippets: React.FC<TextSnippetsProps> = ({ roomCode, socketToke
   };
 
   return (
-    <div className="mt-8 bg-slate-50 dark:bg-slate-900/60 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
+    <div className="mt-6 bg-slate-900/60 rounded-2xl border border-slate-800 p-4 shadow-sm text-left">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+          <div className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
             <MessageSquare className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-              Live Room Clipboard / Text Snippets
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Live Clipboard
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Paste copied links, text notes, or code to sync instantly across devices.
+            <p className="text-[11px] text-slate-400">
+              Paste text or links to sync instantly across devices.
             </p>
           </div>
         </div>
 
         {roomKey && (
-          <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">
+          <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold">
             <Lock className="w-3 h-3" />
-            <span>E2EE Encrypted</span>
+            <span>Encrypted</span>
           </div>
         )}
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSend} className="flex gap-2 mb-4">
+      <form onSubmit={handleSend} className="flex gap-2 mb-3">
         <input
           type="text"
           value={inputContent}
           onChange={(e) => setInputContent(e.target.value)}
           placeholder="Type or paste text/link to share..."
-          className="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+          className="flex-1 px-3.5 py-2 rounded-xl bg-black border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-yellow-400/50"
         />
         <button
           type="submit"
           disabled={submitting || !inputContent.trim()}
-          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xs flex items-center space-x-1.5 disabled:opacity-50 transition-all shadow-md active:scale-95"
+          className="px-4 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-xs flex items-center space-x-1.5 disabled:opacity-50 transition-all active:scale-95"
         >
           <Send className="w-3.5 h-3.5" />
-          <span>{submitting ? 'Sending...' : 'Send'}</span>
+          <span>{submitting ? '...' : 'Send'}</span>
         </button>
       </form>
 

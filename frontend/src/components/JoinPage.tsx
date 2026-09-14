@@ -85,7 +85,7 @@ export const JoinPage: React.FC<JoinPageProps> = ({
   if (loading) {
     return (
       <div className="max-w-md mx-auto w-full glass-panel p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 text-center flex flex-col items-center shadow-2xl">
-        <RefreshCw className="w-10 h-10 text-cyan-500 animate-spin mb-4" />
+        <RefreshCw className="w-10 h-10 text-yellow-400 animate-spin mb-4" />
         <h2 className="text-base font-bold text-slate-800 dark:text-slate-200">Verifying Room Code {cleanCode}...</h2>
       </div>
     );
@@ -143,7 +143,7 @@ export const JoinPage: React.FC<JoinPageProps> = ({
         </p>
         <button
           onClick={onCreateNew}
-          className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all active:scale-95"
+          className="w-full py-3.5 px-6 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold flex items-center justify-center space-x-2 shadow-lg shadow-yellow-500/20 transition-all active:scale-95"
         >
           <span>Create New Room</span>
         </button>
@@ -172,7 +172,7 @@ export const JoinPage: React.FC<JoinPageProps> = ({
 
   return (
     <div className="max-w-md mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl text-center transition-colors duration-300">
-      <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 text-xs font-bold uppercase tracking-wider mb-2">
+      <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-bold uppercase tracking-wider mb-2">
         <QrCode className="w-3.5 h-3.5" />
         <span>QR Invitation</span>
       </div>
@@ -181,27 +181,27 @@ export const JoinPage: React.FC<JoinPageProps> = ({
         Join Temporary Room
       </h2>
 
-      <div className="my-5 py-5 px-4 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-cyan-500/30 shadow-inner">
+      <div className="my-5 py-5 px-4 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-yellow-500/30 shadow-inner">
         <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider block mb-1">
           Room Code
         </span>
-        <span className="text-4xl font-black tracking-widest text-cyan-600 dark:text-cyan-400 font-mono">
+        <span className="text-4xl font-black tracking-widest text-yellow-400 font-mono">
           {cleanCode}
         </span>
       </div>
 
-      <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold mb-6">
-        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-semibold mb-6">
+        <span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></span>
         <span>Session Active</span>
       </div>
 
       {/* Countdown timer */}
       <div className="bg-slate-100/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 mb-8 flex flex-col items-center justify-center">
         <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
-          <Clock className="w-3.5 h-3.5 text-cyan-500" />
+          <Clock className="w-3.5 h-3.5 text-yellow-400" />
           <span>Session Expires In</span>
         </div>
-        <span className="text-xl font-bold font-mono text-cyan-600 dark:text-cyan-400">
+        <span className="text-xl font-bold font-mono text-yellow-400">
           {isExpired ? '00:00:00' : formattedTime}
         </span>
       </div>
@@ -218,7 +218,7 @@ export const JoinPage: React.FC<JoinPageProps> = ({
         <button
           onClick={handleJoin}
           disabled={joining || isExpired}
-          className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-bold flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-50 active:scale-95"
+          className="w-full py-3.5 px-6 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold flex items-center justify-center space-x-2 shadow-lg shadow-yellow-500/20 transition-all disabled:opacity-50 active:scale-95"
         >
           {joining ? (
             <span>Connecting...</span>

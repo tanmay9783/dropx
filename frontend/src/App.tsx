@@ -2,30 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { 
   QrCode, 
   Zap, 
-  Server, 
-  CheckCircle2, 
-  AlertCircle, 
-  RefreshCw, 
   Plus, 
   LogIn, 
-  Cloud, 
-  Lock
+  Cloud,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
-import { fetchHealth, HealthResponse, createRoom, RoomData, JoinRoomResponse } from './services/api';
+import { createRoom, RoomData, JoinRoomResponse } from './services/api';
 import { CreateRoom } from './components/CreateRoom';
 import { JoinRoom } from './components/JoinRoom';
 import { ActiveRoom } from './components/ActiveRoom';
 import { ExpiredRoom } from './components/ExpiredRoom';
 import { JoinPage } from './components/JoinPage';
-import { ThemeToggle } from './components/ThemeToggle';
 
 type AppState = 'HOME' | 'CREATING' | 'ACTIVE_OWNER' | 'JOIN_MANUAL' | 'JOIN_URL' | 'ACTIVE_PARTICIPANT' | 'EXPIRED';
 
 export const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>('HOME');
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [healthLoading, setHealthLoading] = useState<boolean>(true);
-  const [healthError, setHealthError] = useState<string | null>(null);
 
   // Active room data
   const [activeRoom, setActiveRoom] = useState<RoomData | null>(null);
@@ -53,32 +46,6 @@ export const App: React.FC = () => {
     syncRouteFromLocation();
     window.addEventListener('popstate', syncRouteFromLocation);
     return () => window.removeEventListener('popstate', syncRouteFromLocation);
-  }, []);
-
-  const [isWakingUp, setIsWakingUp] = useState<boolean>(false);
-
-  const checkStatus = async () => {
-    setHealthLoading(true);
-    setHealthError(null);
-    setIsWakingUp(false);
-
-    // If backend takes more than 3 seconds to respond, it's likely waking up from free-tier sleep
-    const wakeTimer = setTimeout(() => setIsWakingUp(true), 3000);
-
-    try {
-      const data = await fetchHealth();
-      setHealth(data);
-    } catch (err: any) {
-      setHealthError(err.message || 'Failed to connect to backend server');
-    } finally {
-      clearTimeout(wakeTimer);
-      setHealthLoading(false);
-      setIsWakingUp(false);
-    }
-  };
-
-  useEffect(() => {
-    checkStatus();
   }, []);
 
   const handleCreateRoom = async () => {
@@ -123,162 +90,100 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between p-4 sm:p-8 bg-slate-950 dark:bg-slate-950 text-slate-900 dark:text-slate-100 bg-mesh bg-grid-pattern selection:bg-cyan-500 selection:text-slate-950 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col justify-between p-4 sm:p-8 bg-black text-slate-100 bg-mesh selection:bg-yellow-400 selection:text-black transition-colors duration-300">
       {/* Navigation Bar */}
-      <header className="max-w-6xl mx-auto w-full flex items-center justify-between py-4 border-b border-slate-200/80 dark:border-slate-800/80">
+      <header className="max-w-5xl mx-auto w-full flex items-center justify-between py-4 border-b border-slate-800/80">
         <button
           onClick={resetToHome}
           className="flex items-center space-x-3 text-left focus:outline-none group"
         >
-          <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-cyan-500 via-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-105 group-hover:shadow-cyan-500/40 transition-all">
-            <QrCode className="w-6 h-6 text-white" />
+          <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-yellow-400 via-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-yellow-500/20 group-hover:scale-105 transition-all">
+            <QrCode className="w-6 h-6 text-black" />
           </div>
           <div>
             <div className="flex items-center space-x-1.5">
               <span className="text-2xl font-black tracking-wider gradient-text font-sans">DROPX</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 font-bold uppercase">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 font-bold uppercase">
                 v2.0
               </span>
             </div>
-            <span className="text-[10px] text-slate-500 font-medium tracking-tight block -mt-0.5">
-              Cloud QR File Sharing
+            <span className="text-[10px] text-slate-400 font-medium tracking-tight block -mt-0.5">
+              Instant QR File & Text Share
             </span>
           </div>
         </button>
-
-        {/* Right Nav Utilities: Health Check & Theme Toggle */}
-        <div className="flex items-center space-x-3">
-          {/* Health Badge */}
-          <div className="glass-panel px-3.5 py-1.5 rounded-full flex items-center space-x-2 text-xs font-semibold border border-slate-200 dark:border-slate-800 shadow-sm">
-            <Server className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline text-slate-500 dark:text-slate-400">Server Node:</span>
-            {healthLoading ? (
-              <span className="flex items-center text-amber-500 font-bold text-[11px] sm:text-xs">
-                <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                {isWakingUp ? 'Waking server (~30s)...' : 'Connecting...'}
-              </span>
-            ) : healthError ? (
-              <span className="flex items-center text-rose-500 font-bold">
-                <AlertCircle className="w-3.5 h-3.5 mr-1" /> Offline
-              </span>
-            ) : (
-              <span className="flex items-center text-emerald-500 font-bold">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse mr-1.5"></span>
-                Active ({health?.uptime})
-              </span>
-            )}
-          </div>
-
-          {/* Theme Toggle */}
-          <ThemeToggle />
-        </div>
       </header>
 
       {/* Main App Content Viewport */}
-      <main className="max-w-5xl mx-auto w-full my-auto py-8 sm:py-12 flex flex-col items-center">
+      <main className="max-w-4xl mx-auto w-full my-auto py-8 sm:py-12 flex flex-col items-center">
         {appState === 'HOME' && (
           <div className="w-full flex flex-col items-center text-center">
             {/* Top Pill Badge */}
-            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-cyan-500/10 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
-              <Zap className="w-3.5 h-3.5 text-cyan-500" />
-              <span>Zero-Knowledge QR File Transfer</span>
+            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
+              <Zap className="w-3.5 h-3.5 text-yellow-400" />
+              <span>Instant Mobile & PC Pairing</span>
             </div>
 
             {/* Hero Heading */}
-            <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-slate-900 dark:text-slate-100 max-w-4xl leading-[1.1] mb-6">
-              Share files instantly.<br />
-              <span className="gradient-text">Zero accounts required.</span>
+            <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.15] mb-4">
+              Share Files & Text Instantly.<br />
+              <span className="gradient-text">Zero Login Required.</span>
             </h1>
 
             {/* Hero Description */}
-            <p className="text-base sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mb-10 leading-relaxed font-normal">
-              Create an encrypted temporary room, scan the QR code from any smartphone or laptop, and transfer files directly through high-speed local storage with automated session cleanup.
+            <p className="text-sm sm:text-base text-slate-400 max-w-lg mb-8 leading-relaxed font-normal">
+              Scan the QR code from any mobile device or PC to share files and live clipboard text in seconds.
             </p>
 
             {createError && (
-              <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs flex items-center justify-center space-x-2 max-w-md w-full">
+              <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center space-x-2 max-w-md w-full">
                 <AlertCircle className="w-4 h-4 text-rose-500" />
                 <span>{createError}</span>
               </div>
             )}
 
             {/* Main Action CTAs */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md mb-16">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md mb-12">
               <button
                 onClick={handleCreateRoom}
-                className="w-full sm:w-1/2 py-4 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 via-brand-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black text-sm flex items-center justify-center space-x-2 shadow-xl shadow-cyan-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98"
+                className="w-full sm:w-1/2 min-h-[52px] py-3.5 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center justify-center space-x-2 shadow-xl shadow-yellow-500/20 transition-all transform active:scale-95"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Room</span>
               </button>
               <button
                 onClick={() => setAppState('JOIN_MANUAL')}
-                className="w-full sm:w-1/2 py-4 px-6 rounded-2xl glass-panel hover:bg-slate-100 dark:hover:bg-slate-800/90 text-slate-800 dark:text-slate-200 font-bold text-sm flex items-center justify-center space-x-2 border border-slate-300 dark:border-slate-700 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 shadow-sm"
+                className="w-full sm:w-1/2 min-h-[52px] py-3.5 px-6 rounded-2xl glass-panel hover:bg-slate-900 text-yellow-400 font-bold text-sm flex items-center justify-center space-x-2 border border-yellow-500/30 transition-all transform active:scale-95 shadow-sm"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Join with Code</span>
               </button>
             </div>
 
-            {/* Bento Grid Feature Showcase */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full text-left">
-              {/* Feature 1 */}
-              <div className="glass-panel p-6 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 hover:border-cyan-500/40 dark:hover:border-cyan-500/40 transition-all hover:shadow-xl group">
-                <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <QrCode className="w-6 h-6" />
+            {/* Clean 2-Card Feature Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-left">
+              <div className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-yellow-500/40 transition-all">
+                <div className="h-10 w-10 rounded-xl bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center justify-center mb-3">
+                  <QrCode className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100 mb-2">
-                  Instant QR Pairing
+                <h3 className="text-sm font-bold text-white mb-1">
+                  Instant QR Connect
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Scan the host QR code using any smartphone camera to pair instantly without entering URLs or installing apps.
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Scan the QR code with phone camera to connect without typing URLs.
                 </p>
               </div>
 
-              {/* Feature 2 */}
-              <div className="glass-panel p-6 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 hover:border-violet-500/40 dark:hover:border-violet-500/40 transition-all hover:shadow-xl group">
-                <div className="h-12 w-12 rounded-2xl bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Cloud className="w-6 h-6" />
+              <div className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-yellow-500/40 transition-all">
+                <div className="h-10 w-10 rounded-xl bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center justify-center mb-3">
+                  <Cloud className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100 mb-2">
-                  High-Speed Transfer
+                <h3 className="text-sm font-bold text-white mb-1">
+                  Files & Live Clipboard
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Files upload directly to high-speed local disk storage via secure streams up to 100MB per file.
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Transfer files up to 100MB and sync copied text notes in real-time.
                 </p>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="glass-panel p-6 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all hover:shadow-xl group">
-                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Lock className="w-6 h-6" />
-                </div>
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100 mb-2">
-                  Zero-Trace Auto Cleanup
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Rooms automatically expire after their lifespan. Storage files and metadata are purged with zero leftover traces.
-                </p>
-              </div>
-            </div>
-
-            {/* Architecture Metrics Strip */}
-            <div className="mt-10 py-4 px-6 rounded-2xl glass-panel-subtle border border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-around gap-6 w-full text-xs text-slate-600 dark:text-slate-400 font-mono">
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-500" />
-                <span>Self-Hosted Core</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Local Storage AES-256</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-violet-500" />
-                <span>Socket.IO Real-Time Engine</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-amber-500" />
-                <span>100MB Max File Size</span>
               </div>
             </div>
           </div>

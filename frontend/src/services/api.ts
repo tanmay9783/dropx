@@ -1,3 +1,5 @@
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export interface HealthResponse {
   status: string;
   timestamp: string;
@@ -51,7 +53,7 @@ export interface DestroyRoomResponse {
 }
 
 export async function fetchHealth(): Promise<HealthResponse> {
-  const response = await fetch('/api/health');
+  const response = await fetch(`${API_BASE}/api/health`);
   if (!response.ok) {
     throw new Error(`Health check failed: ${response.statusText}`);
   }
@@ -59,7 +61,7 @@ export async function fetchHealth(): Promise<HealthResponse> {
 }
 
 export async function fetchReadiness(): Promise<ReadyResponse> {
-  const response = await fetch('/api/ready');
+  const response = await fetch(`${API_BASE}/api/ready`);
   if (!response.ok) {
     throw new Error(`Readiness check failed: ${response.statusText}`);
   }
@@ -67,7 +69,7 @@ export async function fetchReadiness(): Promise<ReadyResponse> {
 }
 
 export async function createRoom(): Promise<CreateRoomResponse> {
-  const response = await fetch('/api/rooms', {
+  const response = await fetch(`${API_BASE}/api/rooms`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -79,7 +81,7 @@ export async function createRoom(): Promise<CreateRoomResponse> {
 }
 
 export async function getRoom(roomCode: string): Promise<GetRoomResponse> {
-  const response = await fetch(`/api/rooms/${roomCode}`);
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}`);
   const data = await response.json();
   if (!response.ok) {
     const error = new Error(data.error?.message || 'Failed to fetch room') as any;
@@ -91,7 +93,7 @@ export async function getRoom(roomCode: string): Promise<GetRoomResponse> {
 }
 
 export async function joinRoom(roomCode: string): Promise<JoinRoomResponse> {
-  const response = await fetch(`/api/rooms/${roomCode}/join`, {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/join`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -106,7 +108,7 @@ export async function joinRoom(roomCode: string): Promise<JoinRoomResponse> {
 }
 
 export async function destroyRoom(roomCode: string, ownerToken: string): Promise<DestroyRoomResponse> {
-  const response = await fetch(`/api/rooms/${roomCode}`, {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -125,7 +127,7 @@ export async function requestUploadUrl(
   socketToken: string,
   file: File
 ): Promise<{ uploadUrl: string; fileId: string; objectKey: string; expiresIn: number }> {
-  const response = await fetch(`/api/rooms/${roomCode}/files/upload-url`, {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files/upload-url`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -186,7 +188,7 @@ export async function completeUpload(
   fileId: string,
   socketToken: string
 ): Promise<{ file: SharedFile }> {
-  const response = await fetch(`/api/rooms/${roomCode}/files/${fileId}/complete`, {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files/${fileId}/complete`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${socketToken}`,
@@ -216,7 +218,7 @@ export async function uploadFile(
 }
 
 export async function getFiles(roomCode: string, socketToken: string): Promise<{ files: SharedFile[] }> {
-  const response = await fetch(`/api/rooms/${roomCode}/files`, {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files`, {
     headers: {
       Authorization: `Bearer ${socketToken}`,
     },
@@ -229,7 +231,7 @@ export async function getFiles(roomCode: string, socketToken: string): Promise<{
 }
 
 export async function deleteFile(roomCode: string, fileId: string, socketToken: string): Promise<{ success: boolean }> {
-  const response = await fetch(`/api/rooms/${roomCode}/files/${fileId}`, {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files/${fileId}`, {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${socketToken}`,
@@ -247,7 +249,7 @@ export async function requestDownloadUrl(
   fileId: string,
   socketToken: string
 ): Promise<{ downloadUrl: string; expiresIn: number; fileName: string }> {
-  const response = await fetch(`/api/rooms/${roomCode}/files/${fileId}/download-url`, {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files/${fileId}/download-url`, {
     headers: {
       Authorization: `Bearer ${socketToken}`,
     },

@@ -8,6 +8,7 @@ export type SocketStatus = 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED';
 export interface ParticipantInfo {
   id: string;
   role: string;
+  deviceName?: string;
 }
 
 export interface SocketNotification {
@@ -95,11 +96,13 @@ export function useRoomSocket({
       setParticipants(data.participants || []);
     });
 
-    socket.on('user-joined', (data: { participantId: string; role: string; participantCount: number }) => {
+    socket.on('user-joined', (data: { participantId: string; role: string; deviceName?: string; participantCount: number }) => {
       setParticipantCount(data.participantCount);
       setParticipants((prev) => {
-        if (prev.some((p) => p.id === data.participantId)) return prev;
-        return [...prev, { id: data.participantId, role: data.role }];
+        if (prev.some((p) => p.id === data.participantId)) {
+          return prev.map((p) => (p.id === data.participantId ? { ...p, deviceName: data.deviceName || p.deviceName } : p));
+        }
+        return [...prev, { id: data.participantId, role: data.role, deviceName: data.deviceName }];
       });
       addNotification('A new device joined the room', 'info');
     });
@@ -159,7 +162,7 @@ export function useRoomSocket({
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [roomCode, socketToken, onRoomExpired, onFileUploaded, onFileDeleted, addNotification]);
+  }, [roomCode, socketToken, onRoomExpired, onFileUploaded, onFileDeleted, onSnippetCreated, onSnippetDeleted, addNotification]);
 
   return {
     status,

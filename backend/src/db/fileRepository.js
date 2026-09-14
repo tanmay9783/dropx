@@ -58,7 +58,7 @@ export const fileRepository = {
     const sql = `
       SELECT id, room_code AS "roomCode", participant_id AS "participantId", original_name AS "originalName",
              object_key AS "objectKey", mime_type AS "mimeType", size_bytes AS "sizeBytes",
-             created_at AS "createdAt", status, storage_provider AS "storageProvider"
+             created_at AS "createdAt", status, storage_provider AS "storageProvider", device_name AS "deviceName"
       FROM files
       WHERE id = $1 AND room_code = $2
     `;

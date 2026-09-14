@@ -38,9 +38,11 @@ export const App: React.FC = () => {
   // Parse path on initial load and handle browser back/forward buttons
   const syncRouteFromLocation = () => {
     const path = window.location.pathname;
-    const match = path.match(/^\/join\/([a-zA-Z0-9_-]+)/);
-    if (match && match[1]) {
-      setUrlRoomCode(match[1].toUpperCase());
+    const matchJoin = path.match(/^\/join\/([a-zA-Z0-9_-]+)/);
+    const matchRoom = path.match(/^\/room\/([a-zA-Z0-9_-]+)/);
+    const code = matchJoin?.[1] || matchRoom?.[1];
+    if (code) {
+      setUrlRoomCode(code.toUpperCase());
       setAppState('JOIN_URL');
     } else if (path === '/' && (appState === 'JOIN_URL' || appState === 'JOIN_MANUAL')) {
       setAppState('HOME');

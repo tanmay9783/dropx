@@ -20,23 +20,38 @@ export function useRoomFiles({ roomCode, socketToken, roomKey }: UseRoomFilesOpt
   const [etaFormatted, setEtaFormatted] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch initial files list
-  const loadFiles = useCallback(async () => {
+  // Fetch files list with optional silent loading indicator
+  const loadFiles = useCallback(async (silent = false) => {
     if (!roomCode || !socketToken) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await getFiles(roomCode, socketToken);
       setFiles(res.files || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load room files');
+      if (!silent) setError(err.message || 'Failed to load room files');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [roomCode, socketToken]);
 
   useEffect(() => {
     loadFiles();
+
+    // 5-second background sync for files
+    const interval = setInterval(() => {
+      loadFiles(true);
+    }, 5000);
+
+    const handleFocus = () => {
+      loadFiles(true);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [loadFiles]);
 
   // Handle local upload of selected FileList

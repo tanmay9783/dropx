@@ -66,6 +66,12 @@ export async function initDb() {
       );
       CREATE INDEX IF NOT EXISTS idx_snippets_room_code ON snippets(room_code);
     `);
+
+    try {
+      await pool.query(`ALTER TABLE files ADD COLUMN device_name VARCHAR(128) DEFAULT 'Unknown Device'`);
+    } catch (_) {
+      // Column device_name already exists
+    }
   } else {
     const { default: sqlite3 } = await import('sqlite3');
 
@@ -145,6 +151,12 @@ export async function initDb() {
       );
       CREATE INDEX IF NOT EXISTS idx_snippets_room_code ON snippets(room_code);
     `);
+
+    try {
+      await dbDriver.exec(`ALTER TABLE files ADD COLUMN device_name TEXT DEFAULT 'Unknown Device'`);
+    } catch (_) {
+      // Column device_name already exists
+    }
   }
 }
 

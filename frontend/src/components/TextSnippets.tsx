@@ -19,20 +19,35 @@ export const TextSnippets: React.FC<TextSnippetsProps> = ({ roomCode, socketToke
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [decryptedMap, setDecryptedMap] = useState<Record<string, string>>({});
 
-  const fetchRoomSnippets = async () => {
+  const fetchRoomSnippets = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await getSnippets(roomCode, socketToken);
       setSnippets(res.snippets || []);
     } catch {
-      // Ignore initial snippet fetch failure
+      // Ignore snippet fetch failure
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchRoomSnippets();
+
+    // 4-second fallback polling interval for guaranteed auto-sync across instances
+    const interval = setInterval(() => {
+      fetchRoomSnippets(true);
+    }, 4000);
+
+    const handleFocus = () => {
+      fetchRoomSnippets(true);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [roomCode, socketToken]);
 
   // Sync incoming real-time socket events

@@ -81,6 +81,17 @@ export async function createRoom(): Promise<CreateRoomResponse> {
   return data;
 }
 
+export async function getPresence(roomCode: string, socketToken: string): Promise<{ count: number; list: { id: string; role: string; deviceName?: string }[] }> {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/presence`, {
+    headers: { Authorization: `Bearer ${socketToken}` },
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Failed to fetch room presence');
+  }
+  return data;
+}
+
 export async function getRoom(roomCode: string): Promise<GetRoomResponse> {
   const response = await fetch(`${API_BASE}/api/rooms/${roomCode}`);
   const data = await response.json();

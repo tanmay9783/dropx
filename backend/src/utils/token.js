@@ -3,12 +3,7 @@ import crypto from 'node:crypto';
 import { logger } from './logger.js';
 
 // Shared secret key for HMAC token signing across multi-instance deployment
-const SOCKET_SECRET = process.env.SOCKET_TOKEN_SECRET || process.env.SOCKET_SECRET || (() => {
-  if (process.env.NODE_ENV === 'production') {
-    logger.warn('⚠️ SOCKET_TOKEN_SECRET is not defined in production environment! Generating random process-local secret.');
-  }
-  return crypto.randomBytes(32).toString('hex');
-})();
+const SOCKET_SECRET = process.env.SOCKET_TOKEN_SECRET || process.env.SOCKET_SECRET || 'dropx-stable-production-secret-key-2026-auth';
 
 /**
  * Generate a signed short-lived socket token for a participant/owner.

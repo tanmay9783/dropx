@@ -32,6 +32,9 @@ router.post('/rooms', roomCreationLimiter, roomController.createRoom);
 // Get Room Status
 router.get('/rooms/:roomCode', validateRoomCodeParam, roomController.getRoom);
 
+// Get Room Presence
+router.get('/rooms/:roomCode/presence', validateRoomCodeParam, authenticateRoomAccess, roomController.getRoomPresence);
+
 // Join Room
 router.post('/rooms/:roomCode/join', roomJoinLimiter, validateRoomCodeParam, roomController.joinRoom);
 

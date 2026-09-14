@@ -1,4 +1,5 @@
 import { roomService } from '../services/roomService.js';
+import { getRoomPresence } from '../sockets/socketHandler.js';
 
 export const roomController = {
   async createRoom(req, res, next) {
@@ -15,6 +16,16 @@ export const roomController = {
       const { roomCode } = req.params;
       const result = await roomService.getRoom(roomCode);
       res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getRoomPresence(req, res, next) {
+    try {
+      const { roomCode } = req.params;
+      const presence = await getRoomPresence(roomCode);
+      res.status(200).json(presence);
     } catch (err) {
       next(err);
     }

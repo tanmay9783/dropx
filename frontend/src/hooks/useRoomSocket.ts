@@ -1,7 +1,7 @@
 import { getDeviceName } from "../utils/device";
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { SharedFile } from '../services/api';
+import { SharedFile, getPresence } from '../services/api';
 
 export type SocketStatus = 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED';
 
@@ -54,6 +54,33 @@ export function useRoomSocket({
     setNotifications((prev) => [newNotif, ...prev.slice(0, 4)]);
   }, []);
 
+  // Periodic Presence Sync
+  const fetchPresenceSync = useCallback(async () => {
+    if (!roomCode || !socketToken) return;
+    try {
+      const res = await getPresence(roomCode, socketToken);
+      if (res && typeof res.count === 'number') {
+        setParticipantCount(Math.max(res.count, 1));
+        if (Array.isArray(res.list) && res.list.length > 0) {
+          setParticipants(res.list);
+        }
+      }
+    } catch (_) {
+      // Ignore presence polling failure
+    }
+  }, [roomCode, socketToken]);
+
+  useEffect(() => {
+    fetchPresenceSync();
+    const interval = setInterval(fetchPresenceSync, 4000);
+    const handleFocus = () => fetchPresenceSync();
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchPresenceSync]);
+
   useEffect(() => {
     if (!roomCode || !socketToken) {
       setStatus('DISCONNECTED');
@@ -80,6 +107,7 @@ export function useRoomSocket({
 
     socket.on('connect', () => {
       setStatus('CONNECTED');
+      fetchPresenceSync();
     });
 
     socket.on('disconnect', () => {
@@ -162,7 +190,7 @@ export function useRoomSocket({
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [roomCode, socketToken, onRoomExpired, onFileUploaded, onFileDeleted, onSnippetCreated, onSnippetDeleted, addNotification]);
+  }, [roomCode, socketToken, onRoomExpired, onFileUploaded, onFileDeleted, onSnippetCreated, onSnippetDeleted, addNotification, fetchPresenceSync]);
 
   return {
     status,

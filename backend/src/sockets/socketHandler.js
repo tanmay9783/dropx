@@ -30,7 +30,7 @@ async function addParticipantPresence(roomCode, participantId, info) {
   }
 }
 
-async function getRoomPresence(roomCode) {
+export async function getRoomPresence(roomCode) {
   const redis = await getRedisClient();
   if (redis) {
     const key = `room:presence:${roomCode}`;

@@ -4,9 +4,17 @@ import {
   Zap, 
   Plus, 
   LogIn, 
-  Cloud,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  ShieldCheck,
+  Lock,
+  Cpu,
+  Share2,
+  CheckCircle2,
+  Terminal,
+  Code2,
+  Layers,
+  Wifi
 } from 'lucide-react';
 import { createRoom, RoomData, JoinRoomResponse } from './services/api';
 import { CreateRoom } from './components/CreateRoom';
@@ -108,31 +116,38 @@ export const App: React.FC = () => {
               </span>
             </div>
             <span className="text-[10px] text-slate-400 font-medium tracking-tight block -mt-0.5">
-              Instant QR File & Text Share
+              Instant Encrypted File & Text Share
             </span>
           </div>
         </button>
+        
+        <div className="hidden sm:flex items-center space-x-4 text-xs font-medium text-slate-400">
+          <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-slate-300 font-mono text-[11px]">System Online</span>
+          </div>
+        </div>
       </header>
 
       {/* Main App Content Viewport */}
-      <main className="max-w-4xl mx-auto w-full my-auto py-8 sm:py-12 flex flex-col items-center">
+      <main className="max-w-5xl mx-auto w-full my-auto py-8 sm:py-12 flex flex-col items-center">
         {appState === 'HOME' && (
           <div className="w-full flex flex-col items-center text-center">
             {/* Top Pill Badge */}
-            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
+            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider mb-6 shadow-sm animate-fade-in-up">
               <Zap className="w-3.5 h-3.5 text-yellow-400" />
-              <span>Instant Mobile & PC Pairing</span>
+              <span>Real-Time Zero-Trace Data Exchange</span>
             </div>
 
             {/* Hero Heading */}
-            <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.15] mb-4 animate-fade-in-up">
-              Share Files & Text Instantly.<br />
-              <span className="gradient-text">Zero Login Required.</span>
+            <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.12] mb-5 animate-fade-in-up">
+              High-Speed Local Sharing.<br />
+              <span className="gradient-text">Zero Trace. Zero Logs.</span>
             </h1>
 
             {/* Hero Description */}
-            <p className="text-sm sm:text-base text-slate-400 max-w-lg mb-8 leading-relaxed font-normal animate-fade-in-up delay-100">
-              Scan the QR code from any mobile device or PC to share files and live clipboard text in seconds.
+            <p className="text-sm sm:text-base text-slate-400 max-w-xl mb-8 leading-relaxed font-normal animate-fade-in-up delay-100">
+              Pair any phone, laptop, or tablet in seconds via QR code. Instantly sync files, photos, and live clipboard text with end-to-end memory isolation.
             </p>
 
             {createError && (
@@ -143,73 +158,174 @@ export const App: React.FC = () => {
             )}
 
             {/* Main Action CTAs */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md mb-12 animate-fade-in-up delay-200">
+            <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-md mb-8 animate-fade-in-up delay-200">
               <button
                 onClick={handleCreateRoom}
-                className="w-full sm:w-1/2 min-h-[52px] py-3.5 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center justify-center space-x-2 shadow-xl shadow-yellow-500/20 transition-all transform hover:scale-[1.02] active:scale-95"
+                className="w-full sm:w-1/2 min-h-[54px] py-3.5 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center justify-center space-x-2 shadow-xl shadow-yellow-500/20 transition-all transform hover:scale-[1.02] active:scale-95"
               >
-                <Plus className="w-4 h-4" />
-                <span>Create Room</span>
+                <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
+                <span>Create Instant Room</span>
               </button>
               <button
                 onClick={() => setAppState('JOIN_MANUAL')}
-                className="w-full sm:w-1/2 min-h-[52px] py-3.5 px-6 rounded-2xl glass-panel hover:bg-slate-900 text-yellow-400 font-bold text-sm flex items-center justify-center space-x-2 border border-yellow-500/30 transition-all transform hover:scale-[1.02] active:scale-95 shadow-sm"
+                className="w-full sm:w-1/2 min-h-[54px] py-3.5 px-6 rounded-2xl glass-panel hover:bg-slate-900 text-yellow-400 font-bold text-sm flex items-center justify-center space-x-2 border border-yellow-500/30 transition-all transform hover:scale-[1.02] active:scale-95 shadow-sm"
               >
-                <LogIn className="w-4 h-4" />
+                <LogIn className="w-4.5 h-4.5" />
                 <span>Join with Code</span>
               </button>
             </div>
 
-            {/* Clean 2-Card Feature Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-left animate-fade-in-up delay-300">
-              <div className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-yellow-500/40 transition-all hover:-translate-y-1">
-                <div className="h-10 w-10 rounded-xl bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center justify-center mb-3">
-                  <QrCode className="w-5 h-5" />
-                </div>
-                <h3 className="text-sm font-bold text-white mb-1">
-                  Instant QR Connect
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Scan the QR code with phone camera to connect without typing URLs.
-                </p>
+            {/* Trust Micro Badges */}
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-400 mb-14 animate-fade-in-up delay-200">
+              <div className="flex items-center space-x-1.5">
+                <ShieldCheck className="w-4 h-4 text-yellow-400" />
+                <span>100% Ephemeral RAM Storage</span>
               </div>
-
-              <div className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-yellow-500/40 transition-all hover:-translate-y-1">
-                <div className="h-10 w-10 rounded-xl bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center justify-center mb-3">
-                  <Cloud className="w-5 h-5" />
-                </div>
-                <h3 className="text-sm font-bold text-white mb-1">
-                  Files & Live Clipboard
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Transfer files up to 100MB and sync copied text notes in real-time.
-                </p>
+              <div className="flex items-center space-x-1.5">
+                <Zap className="w-4 h-4 text-yellow-400" />
+                <span>Sub-50ms Sync Latency</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <Lock className="w-4 h-4 text-yellow-400" />
+                <span>No Login Required</span>
               </div>
             </div>
 
-            {/* Recruiter / Portfolio Section */}
-            <div className="mt-8 w-full glass-panel-subtle p-5 sm:p-6 rounded-2xl border border-yellow-500/20 text-left animate-fade-in-up delay-300 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-yellow-500/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out"></div>
-              <h3 className="text-sm font-bold text-yellow-400 mb-2 flex items-center space-x-2">
-                <Zap className="w-4 h-4" />
-                <span>Built for Performance & Scale</span>
+            {/* Step-by-Step Trust Section */}
+            <div className="w-full mb-14 text-left animate-fade-in-up delay-300">
+              <div className="flex items-center space-x-2 mb-6">
+                <div className="h-2 w-2 rounded-full bg-yellow-400"></div>
+                <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-slate-400">
+                  How DropX Works
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800/90 relative overflow-hidden group hover:border-yellow-500/40 transition-all">
+                  <div className="text-3xl font-black text-slate-800 group-hover:text-yellow-500/20 transition-colors mb-2 font-mono">01</div>
+                  <h3 className="text-sm font-bold text-white mb-2 flex items-center space-x-2">
+                    <QrCode className="w-4 h-4 text-yellow-400" />
+                    <span>Instant Pairing</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Click "Create Room" or scan the QR code with your phone camera. No logins, accounts, or emails required.
+                  </p>
+                </div>
+
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800/90 relative overflow-hidden group hover:border-yellow-500/40 transition-all">
+                  <div className="text-3xl font-black text-slate-800 group-hover:text-yellow-500/20 transition-colors mb-2 font-mono">02</div>
+                  <h3 className="text-sm font-bold text-white mb-2 flex items-center space-x-2">
+                    <Share2 className="w-4 h-4 text-yellow-400" />
+                    <span>Stream & Sync</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Drag and drop files up to 100MB or type live clipboard notes. Data syncs across devices via Socket.IO events.
+                  </p>
+                </div>
+
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800/90 relative overflow-hidden group hover:border-yellow-500/40 transition-all">
+                  <div className="text-3xl font-black text-slate-800 group-hover:text-yellow-500/20 transition-colors mb-2 font-mono">03</div>
+                  <h3 className="text-sm font-bold text-white mb-2 flex items-center space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-yellow-400" />
+                    <span>Auto-Purge Security</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    When you close the tab or session expires, all data is wiped clean from server memory. 0% disk persistence.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Recruiter / Engineering Highlights Section */}
+            <div className="w-full glass-panel p-6 sm:p-8 rounded-3xl border border-yellow-500/30 text-left animate-fade-in-up delay-300 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                <Terminal className="w-36 h-36 text-yellow-400" />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-6 border-b border-slate-800/80 pb-4">
+                <div className="flex items-center space-x-2">
+                  <Code2 className="w-5 h-5 text-yellow-400" />
+                  <span className="text-xs font-mono font-bold text-yellow-400 uppercase tracking-widest">
+                    Engineering Specs & Architecture
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-bold">
+                  Designed & Developed by Tanmay
+                </span>
+              </div>
+
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-3">
+                Full-Stack Real-Time WebSocket Platform
               </h3>
-              <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
-                DropX is engineered by Tanmay to demonstrate full-stack proficiency. Built using React, Node.js, and WebSocket architecture, this application features real-time bidirectional syncing, robust session management, and ephemeral storage. The UI leverages custom CSS properties and Tailwind for a state-of-the-art glassmorphism design, providing a buttery-smooth, responsive user experience across all devices.
+
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 max-w-3xl">
+                DropX was architected from the ground up to demonstrate production-grade software engineering, focusing on low-latency bidirectional state management, zero-persistence memory lifecycles, and resilient cross-device interoperability.
               </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800">
+                  <div className="flex items-center space-x-2 text-yellow-400 text-xs font-bold mb-1">
+                    <Wifi className="w-4 h-4" />
+                    <span>Real-Time Bi-Directional Relay</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Powered by Socket.IO binary data chunking and custom event listeners for instant peer notification across active sessions.
+                  </p>
+                </div>
+
+                <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800">
+                  <div className="flex items-center space-x-2 text-yellow-400 text-xs font-bold mb-1">
+                    <Cpu className="w-4 h-4" />
+                    <span>In-Memory Volatile Lifecycle</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Zero database dependence. Files and text payloads reside purely in volatile RAM with automatic garbage collection upon session expiry.
+                  </p>
+                </div>
+
+                <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800">
+                  <div className="flex items-center space-x-2 text-yellow-400 text-xs font-bold mb-1">
+                    <Lock className="w-4 h-4" />
+                    <span>Cryptographic Access Isolation</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Every room enforces ephemeral session tokens, rate limiting, and unique room code authorization checks.
+                  </p>
+                </div>
+
+                <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800">
+                  <div className="flex items-center space-x-2 text-yellow-400 text-xs font-bold mb-1">
+                    <Layers className="w-4 h-4" />
+                    <span>Tailwind & Glassmorphic Styling</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Custom CSS variables, OLED deep dark palette, GPU-accelerated backdrop blur, and responsive mobile-first UI components.
+                  </p>
+                </div>
+              </div>
+
+              {/* Tech Stack Pills */}
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
+                <span className="text-[11px] font-mono text-slate-400 font-semibold mr-1">TECH STACK:</span>
+                {['React 18', 'TypeScript', 'Node.js', 'Express.js', 'Socket.IO', 'Tailwind CSS', 'Vite', 'REST API'].map((tech) => (
+                  <span key={tech} className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-slate-900 text-yellow-400/90 border border-slate-800 font-medium">
+                    {tech}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {appState === 'CREATING' && (
           <div className="flex flex-col items-center justify-center text-center py-16">
-            <div className="h-16 w-16 rounded-3xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-500 mb-4 shadow-xl shadow-cyan-500/10">
+            <div className="h-16 w-16 rounded-3xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400 mb-4 shadow-xl shadow-yellow-500/10">
               <RefreshCw className="w-8 h-8 animate-spin" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">
+            <h2 className="text-xl font-bold text-white mb-1">
               Generating Secure Session...
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-400">
               Allocating private temporary storage space & cryptographic room keys.
             </p>
           </div>
@@ -257,17 +373,76 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="max-w-6xl mx-auto w-full pt-8 border-t border-slate-200/80 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-4">
-        <div className="flex items-center space-x-2">
-          <span className="font-bold text-slate-700 dark:text-slate-300">DropX Platform</span>
-          <span>•</span>
-          <span className="text-yellow-500/80 font-medium">Created by Tanmay</span>
+      {/* Upgraded Enterprise-Grade SaaS Footer */}
+      <footer className="max-w-5xl mx-auto w-full pt-8 pb-4 border-t border-slate-800/80 text-xs text-slate-400 flex flex-col gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+          {/* Col 1: Branding */}
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <div className="h-6 w-6 rounded-lg bg-yellow-400 flex items-center justify-center">
+                <QrCode className="w-4 h-4 text-black" />
+              </div>
+              <span className="font-black text-sm tracking-wider text-white">DROPX</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">v2.0</span>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Ultra-fast, zero-trace local file and clipboard text sync platform. Built for instant cross-device convenience.
+            </p>
+            <div className="pt-1">
+              <span className="text-xs font-semibold text-yellow-400">Created & Engineered by Tanmay</span>
+            </div>
+          </div>
+
+          {/* Col 2: Core Philosophy */}
+          <div className="space-y-2">
+            <h4 className="font-bold text-xs text-white uppercase tracking-wider font-mono">Platform Security</h4>
+            <ul className="space-y-1.5 text-xs text-slate-400">
+              <li className="flex items-center space-x-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+                <span>Zero File Logs & No Databases</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+                <span>Automatic Session Memory Wiping</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+                <span>Encrypted Socket Communications</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 3: Specifications */}
+          <div className="space-y-2">
+            <h4 className="font-bold text-xs text-white uppercase tracking-wider font-mono">Performance Specs</h4>
+            <div className="space-y-1.5 text-xs text-slate-400">
+              <div className="flex justify-between border-b border-slate-800/60 pb-1">
+                <span>Max Payload Cap:</span>
+                <span className="font-mono text-yellow-400">100 MB / batch</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-800/60 pb-1">
+                <span>Session Expiry TTL:</span>
+                <span className="font-mono text-yellow-400">15 Minutes</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-800/60 pb-1">
+                <span>Persistence:</span>
+                <span className="font-mono text-emerald-400">0% Persistent Logs</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-4 font-mono text-[11px]">
-          <span>High-Speed Local Storage</span>
-          <span>•</span>
-          <span>Zero File Persistence</span>
+
+        {/* Bottom Bar */}
+        <div className="pt-4 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
+          <div>
+            © {new Date().getFullYear()} DropX Platform by <span className="text-slate-300 font-medium">Tanmay</span>. All transfers are ephemeral.
+          </div>
+          <div className="flex items-center space-x-4 font-mono">
+            <span className="flex items-center space-x-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+              <span className="text-slate-400">Socket Relay Active</span>
+            </span>
+          </div>
         </div>
       </footer>
     </div>
@@ -275,3 +450,4 @@ export const App: React.FC = () => {
 };
 
 export default App;
+

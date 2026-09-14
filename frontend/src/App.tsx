@@ -111,32 +111,22 @@ export const App: React.FC = () => {
           <div>
             <div className="flex items-center space-x-1.5">
               <span className="text-2xl font-black tracking-wider gradient-text font-sans">DROPX</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 font-bold uppercase">
-                v2.0
-              </span>
             </div>
             <span className="text-[10px] text-slate-400 font-medium tracking-tight block -mt-0.5">
               Instant Encrypted File & Text Share
             </span>
           </div>
         </button>
-        
-        <div className="hidden sm:flex items-center space-x-4 text-xs font-medium text-slate-400">
-          <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-slate-300 font-mono text-[11px]">System Online</span>
-          </div>
-        </div>
       </header>
 
       {/* Main App Content Viewport */}
       <main className="max-w-5xl mx-auto w-full my-auto py-8 sm:py-12 flex flex-col items-center">
         {appState === 'HOME' && (
           <div className="w-full flex flex-col items-center text-center">
-            {/* Top Pill Badge */}
-            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider mb-6 shadow-sm animate-fade-in-up">
+            {/* Top Badge */}
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-semibold tracking-wide mb-6 animate-fade-in-up">
               <Zap className="w-3.5 h-3.5 text-yellow-400" />
-              <span>Real-Time Zero-Trace Data Exchange</span>
+              <span>Instant & Private Local Sharing</span>
             </div>
 
             {/* Hero Heading */}
@@ -236,7 +226,7 @@ export const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Recruiter / Engineering Highlights Section */}
+            {/* Engineering Highlights Section */}
             <div className="w-full glass-panel p-6 sm:p-8 rounded-3xl border border-yellow-500/30 text-left animate-fade-in-up delay-300 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                 <Terminal className="w-36 h-36 text-yellow-400" />
@@ -246,60 +236,60 @@ export const App: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <Code2 className="w-5 h-5 text-yellow-400" />
                   <span className="text-xs font-mono font-bold text-yellow-400 uppercase tracking-widest">
-                    Engineering Specs & Architecture
+                    How DropX Is Built
                   </span>
                 </div>
-                <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-bold">
-                  Designed & Developed by Tanmay
+                <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-semibold">
+                  Created by Tanmay
                 </span>
               </div>
 
               <h3 className="text-lg sm:text-xl font-bold text-white mb-3">
-                Full-Stack Real-Time WebSocket Platform
+                Real-Time WebSockets & In-Memory Sync
               </h3>
 
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 max-w-3xl">
-                DropX was architected from the ground up to demonstrate production-grade software engineering, focusing on low-latency bidirectional state management, zero-persistence memory lifecycles, and resilient cross-device interoperability.
+                DropX connects your devices instantly across mobile and desktop. Built with Socket.IO and temporary memory buffers, it streams files and copied text live without saving anything to a persistent database.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800">
                   <div className="flex items-center space-x-2 text-yellow-400 text-xs font-bold mb-1">
                     <Wifi className="w-4 h-4" />
-                    <span>Real-Time Bi-Directional Relay</span>
+                    <span>Real-Time Data Streaming</span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Powered by Socket.IO binary data chunking and custom event listeners for instant peer notification across active sessions.
+                    Socket.IO event listeners stream file chunks and clipboard text instantly between your connected devices.
                   </p>
                 </div>
 
                 <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800">
                   <div className="flex items-center space-x-2 text-yellow-400 text-xs font-bold mb-1">
                     <Cpu className="w-4 h-4" />
-                    <span>In-Memory Volatile Lifecycle</span>
+                    <span>Zero Database / RAM Only</span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Zero database dependence. Files and text payloads reside purely in volatile RAM with automatic garbage collection upon session expiry.
+                    Files reside strictly in volatile RAM and are automatically purged when your session ends or expires.
                   </p>
                 </div>
 
                 <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800">
                   <div className="flex items-center space-x-2 text-yellow-400 text-xs font-bold mb-1">
                     <Lock className="w-4 h-4" />
-                    <span>Cryptographic Access Isolation</span>
+                    <span>Secure Session Isolation</span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Every room enforces ephemeral session tokens, rate limiting, and unique room code authorization checks.
+                    Every room uses random codes and session tokens so only your paired devices can access shared content.
                   </p>
                 </div>
 
                 <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800">
                   <div className="flex items-center space-x-2 text-yellow-400 text-xs font-bold mb-1">
                     <Layers className="w-4 h-4" />
-                    <span>Tailwind & Glassmorphic Styling</span>
+                    <span>Clean Dark-Mode UI</span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Custom CSS variables, OLED deep dark palette, GPU-accelerated backdrop blur, and responsive mobile-first UI components.
+                    Crafted with React, TypeScript, and Tailwind CSS featuring an OLED black theme optimized for phones and PCs.
                   </p>
                 </div>
               </div>
@@ -307,7 +297,7 @@ export const App: React.FC = () => {
               {/* Tech Stack Pills */}
               <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
                 <span className="text-[11px] font-mono text-slate-400 font-semibold mr-1">TECH STACK:</span>
-                {['React 18', 'TypeScript', 'Node.js', 'Express.js', 'Socket.IO', 'Tailwind CSS', 'Vite', 'REST API'].map((tech) => (
+                {['React', 'TypeScript', 'Node.js', 'Express', 'Socket.IO', 'Tailwind CSS', 'Vite'].map((tech) => (
                   <span key={tech} className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-slate-900 text-yellow-400/90 border border-slate-800 font-medium">
                     {tech}
                   </span>
@@ -326,7 +316,7 @@ export const App: React.FC = () => {
               Generating Secure Session...
             </h2>
             <p className="text-xs text-slate-400">
-              Allocating private temporary storage space & cryptographic room keys.
+              Creating private temporary room & security tokens.
             </p>
           </div>
         )}
@@ -373,7 +363,7 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Upgraded Enterprise-Grade SaaS Footer */}
+      {/* SaaS Footer */}
       <footer className="max-w-5xl mx-auto w-full pt-8 pb-4 border-t border-slate-800/80 text-xs text-slate-400 flex flex-col gap-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
           {/* Col 1: Branding */}
@@ -383,50 +373,49 @@ export const App: React.FC = () => {
                 <QrCode className="w-4 h-4 text-black" />
               </div>
               <span className="font-black text-sm tracking-wider text-white">DROPX</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">v2.0</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Ultra-fast, zero-trace local file and clipboard text sync platform. Built for instant cross-device convenience.
+              Fast, private file and text sharing between devices. No logins, no permanent logs.
             </p>
             <div className="pt-1">
-              <span className="text-xs font-semibold text-yellow-400">Created & Engineered by Tanmay</span>
+              <span className="text-xs font-semibold text-yellow-400">Built by Tanmay</span>
             </div>
           </div>
 
-          {/* Col 2: Core Philosophy */}
+          {/* Col 2: Core Features */}
           <div className="space-y-2">
-            <h4 className="font-bold text-xs text-white uppercase tracking-wider font-mono">Platform Security</h4>
+            <h4 className="font-bold text-xs text-white uppercase tracking-wider font-mono">Privacy & Security</h4>
             <ul className="space-y-1.5 text-xs text-slate-400">
               <li className="flex items-center space-x-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-                <span>Zero File Logs & No Databases</span>
+                <span>Zero File Persistence & No Databases</span>
               </li>
               <li className="flex items-center space-x-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-                <span>Automatic Session Memory Wiping</span>
+                <span>Automatic Memory Purge on Exit</span>
               </li>
               <li className="flex items-center space-x-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-                <span>Encrypted Socket Communications</span>
+                <span>Private Socket Communications</span>
               </li>
             </ul>
           </div>
 
           {/* Col 3: Specifications */}
           <div className="space-y-2">
-            <h4 className="font-bold text-xs text-white uppercase tracking-wider font-mono">Performance Specs</h4>
+            <h4 className="font-bold text-xs text-white uppercase tracking-wider font-mono">Platform Limits</h4>
             <div className="space-y-1.5 text-xs text-slate-400">
               <div className="flex justify-between border-b border-slate-800/60 pb-1">
                 <span>Max Payload Cap:</span>
-                <span className="font-mono text-yellow-400">100 MB / batch</span>
+                <span className="font-mono text-yellow-400">100 MB</span>
               </div>
               <div className="flex justify-between border-b border-slate-800/60 pb-1">
-                <span>Session Expiry TTL:</span>
+                <span>Session Duration:</span>
                 <span className="font-mono text-yellow-400">15 Minutes</span>
               </div>
               <div className="flex justify-between border-b border-slate-800/60 pb-1">
-                <span>Persistence:</span>
-                <span className="font-mono text-emerald-400">0% Persistent Logs</span>
+                <span>Storage Logs:</span>
+                <span className="font-mono text-emerald-400">0% Stored</span>
               </div>
             </div>
           </div>
@@ -435,13 +424,7 @@ export const App: React.FC = () => {
         {/* Bottom Bar */}
         <div className="pt-4 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
           <div>
-            © {new Date().getFullYear()} DropX Platform by <span className="text-slate-300 font-medium">Tanmay</span>. All transfers are ephemeral.
-          </div>
-          <div className="flex items-center space-x-4 font-mono">
-            <span className="flex items-center space-x-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-              <span className="text-slate-400">Socket Relay Active</span>
-            </span>
+            © {new Date().getFullYear()} DropX by <span className="text-slate-300 font-medium">Tanmay</span>. Transfers are completely ephemeral.
           </div>
         </div>
       </footer>

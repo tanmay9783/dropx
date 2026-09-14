@@ -29,6 +29,7 @@ export interface SharedFile {
   mimeType: string;
   sizeBytes: number;
   createdAt: string;
+  deviceName?: string;
 }
 
 export interface CreateRoomResponse {
@@ -122,22 +123,28 @@ export async function destroyRoom(roomCode: string, ownerToken: string): Promise
   return data;
 }
 
+export interface UploadUrlResponse {
+  uploadUrl: string;
+  fileId: string;
+  objectKey: string;
+  expiresIn: number;
+}
+
 export async function requestUploadUrl(
   roomCode: string,
+  fileName: string,
+  contentType: string,
+  sizeBytes: number,
   socketToken: string,
-  file: File
-): Promise<{ uploadUrl: string; fileId: string; objectKey: string; expiresIn: number }> {
+  deviceName?: string
+): Promise<UploadUrlResponse> {
   const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files/upload-url`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${socketToken}`,
     },
-    body: JSON.stringify({
-      fileName: file.name,
-      contentType: file.type || 'application/octet-stream',
-      sizeBytes: file.size,
-    }),
+    body: JSON.stringify({ fileName, contentType, sizeBytes, deviceName }),
   });
   const data = await response.json();
   if (!response.ok) {
@@ -224,6 +231,7 @@ export async function uploadFile(
       fileName: name,
       contentType: file.type || 'application/octet-stream',
       sizeBytes: size,
+      deviceName: (await import('./../utils/device')).getDeviceName()
     }),
   });
   const data = await response.json();

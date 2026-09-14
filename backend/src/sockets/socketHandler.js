@@ -40,7 +40,7 @@ async function getRoomPresence(roomCode) {
       for (const [id, value] of Object.entries(raw)) {
         try {
           const parsed = JSON.parse(value);
-          participantsList.push({ id, role: parsed.role });
+          participantsList.push({ id, role: parsed.role, deviceName: parsed.deviceName || 'Unknown Device' });
         } catch {
           // Ignore parse error
         }
@@ -56,6 +56,7 @@ async function getRoomPresence(roomCode) {
     const list = Array.from(participantMap.entries()).map(([id, info]) => ({
       id,
       role: info.role,
+      deviceName: info.deviceName || 'Unknown Device'
     }));
     return { count: participantMap.size, list };
   }
@@ -120,6 +121,7 @@ export function initSocketIo(httpServer) {
       const auth = socket.handshake.auth || {};
       const token = auth.token;
       const roomCode = auth.roomCode ? auth.roomCode.trim().toUpperCase() : null;
+      const deviceName = auth.deviceName || 'Unknown Device';
 
       if (!token || !roomCode) {
         return next(new Error('Authentication failed: Missing token or roomCode'));
@@ -150,6 +152,7 @@ export function initSocketIo(httpServer) {
       socket.participantId = payload.participantId;
       socket.role = payload.role;
       socket.expiresAt = room.expiresAt;
+      socket.deviceName = deviceName;
 
       next();
     } catch (err) {
@@ -160,8 +163,8 @@ export function initSocketIo(httpServer) {
 
   // Socket Connection Handling
   io.on('connection', async (socket) => {
-    const { roomCode, participantId, role, expiresAt } = socket;
-    logger.info({ roomCode, participantId, role, socketId: socket.id }, 'Socket connected to room');
+    const { roomCode, participantId, role, expiresAt, deviceName } = socket;
+    logger.info({ roomCode, participantId, role, deviceName, socketId: socket.id }, 'Socket connected to room');
 
     socket.join(roomCode);
 
@@ -169,6 +172,7 @@ export function initSocketIo(httpServer) {
     await addParticipantPresence(roomCode, participantId, {
       socketId: socket.id,
       role,
+      deviceName,
       joinedAt: new Date().toISOString(),
     });
 
@@ -182,10 +186,10 @@ export function initSocketIo(httpServer) {
       expiresAt,
     });
 
-    // Broadcast user-joined to all members in room (across all EC2 instances via Redis adapter)
     socket.to(roomCode).emit('user-joined', {
       participantId,
       role,
+      deviceName,
       participantCount: presence.count,
     });
 

@@ -52,7 +52,8 @@ export async function initDb() {
         size_bytes BIGINT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'pending',
-        storage_provider VARCHAR(20) NOT NULL DEFAULT 'local'
+        storage_provider VARCHAR(20) NOT NULL DEFAULT 'local',
+        device_name VARCHAR(128) DEFAULT 'Unknown Device'
       );
       CREATE INDEX IF NOT EXISTS idx_files_room_code ON files(room_code);
       CREATE INDEX IF NOT EXISTS idx_files_status ON files(status);
@@ -130,7 +131,8 @@ export async function initDb() {
         size_bytes INTEGER NOT NULL,
         created_at TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending',
-        storage_provider TEXT NOT NULL DEFAULT 'local'
+        storage_provider TEXT NOT NULL DEFAULT 'local',
+        device_name TEXT DEFAULT 'Unknown Device'
       );
       CREATE INDEX IF NOT EXISTS idx_files_room_code ON files(room_code);
       CREATE INDEX IF NOT EXISTS idx_files_status ON files(status);

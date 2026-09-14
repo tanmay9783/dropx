@@ -1,3 +1,4 @@
+import { getDeviceName } from "../utils/device";
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { SharedFile } from '../services/api';
@@ -23,7 +24,7 @@ interface UseRoomSocketOptions {
   onFileUploaded?: (file: SharedFile) => void;
   onFileDeleted?: (fileId: string) => void;
   onSnippetCreated?: (snippet: any) => void;
-  onSnippetDeleted?: (snippetId: string) => void;
+  onSnippetDeleted?: (id: string) => void;
 }
 
 export function useRoomSocket({
@@ -67,7 +68,9 @@ export function useRoomSocket({
       auth: {
         token: socketToken,
         roomCode,
+        deviceName: getDeviceName(),
       },
+      withCredentials: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
     });

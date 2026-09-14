@@ -4,7 +4,7 @@ export const fileController = {
   async requestUploadUrl(req, res, next) {
     try {
       const { roomCode } = req.params;
-      const { fileName, contentType, sizeBytes } = req.body || {};
+      const { fileName, contentType, sizeBytes, deviceName } = req.body || {};
       const participantId = req.auth.participantId;
 
       const result = await fileService.requestUploadUrl({
@@ -13,6 +13,7 @@ export const fileController = {
         fileName,
         contentType,
         sizeBytes,
+        deviceName,
       });
 
       res.status(200).json(result);

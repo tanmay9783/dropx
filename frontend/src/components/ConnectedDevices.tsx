@@ -3,6 +3,7 @@ import { Users, Crown, Smartphone, Laptop, Wifi } from 'lucide-react';
 export interface ParticipantInfo {
   id: string;
   role: 'owner' | 'participant' | string;
+  deviceName?: string;
 }
 
 interface ConnectedDevicesProps {
@@ -22,8 +23,8 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
   const displayList: ParticipantInfo[] = participants.length > 0 
     ? participants 
     : [
-        { id: isOwner ? 'Host Device' : 'host-1', role: 'owner' },
-        ...(participantCount > 1 ? [{ id: currentParticipantId || 'guest-1', role: 'participant' }] : [])
+        { id: isOwner ? 'Host Device' : 'host-1', role: 'owner', deviceName: 'Host Device' },
+        ...(participantCount > 1 ? [{ id: currentParticipantId || 'guest-1', role: 'participant', deviceName: 'Guest Device' }] : [])
       ];
 
   const getDeviceIcon = (id: string, role: string) => {
@@ -36,10 +37,9 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
     );
   };
 
-  const getDeviceLabel = (id: string, role: string) => {
-    if (role === 'owner') return 'Host (Room Creator)';
-    const shortId = id.replace('guest-', '').replace('participant-', '').substring(0, 6).toUpperCase();
-    return `Device #${shortId}`;
+  const getDeviceLabel = (p: ParticipantInfo) => {
+    if (p.role === 'owner') return p.deviceName || 'Host (Room Creator)';
+    return p.deviceName || `Device #${p.id.substring(0, 4)}`;
   };
 
   return (
@@ -77,7 +77,7 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
                 <div className="min-w-0">
                   <div className="flex items-center space-x-1.5">
                     <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                      {getDeviceLabel(p.id, p.role)}
+                      {getDeviceLabel(p)}
                     </span>
                     {isCurrent && (
                       <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500 text-slate-950 font-extrabold uppercase">

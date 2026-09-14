@@ -15,11 +15,12 @@ export const fileRepository = {
     createdAt,
     status = 'pending',
     storageProvider = 'local',
+    ...options
   }) {
     const db = getDb();
     const sql = `
-      INSERT INTO files (id, room_code, participant_id, original_name, object_key, mime_type, size_bytes, created_at, status, storage_provider)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO files (id, room_code, participant_id, original_name, object_key, mime_type, size_bytes, created_at, status, storage_provider, device_name)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     `;
     await db.query(sql, [
       id,
@@ -32,6 +33,7 @@ export const fileRepository = {
       createdAt,
       status,
       storageProvider,
+      options?.deviceName || 'Unknown Device'
     ]);
     return {
       id,
@@ -44,6 +46,7 @@ export const fileRepository = {
       createdAt,
       status,
       storageProvider,
+      deviceName: options?.deviceName || 'Unknown Device'
     };
   },
 
@@ -72,7 +75,7 @@ export const fileRepository = {
     const sql = `
       SELECT id, room_code AS "roomCode", participant_id AS "participantId", original_name AS "originalName",
              object_key AS "objectKey", mime_type AS "mimeType", size_bytes AS "sizeBytes",
-             created_at AS "createdAt", status, storage_provider AS "storageProvider"
+             created_at AS "createdAt", status, storage_provider AS "storageProvider", device_name AS "deviceName"
       FROM files
       WHERE room_code = $1 AND status = 'active'
       ORDER BY created_at ASC

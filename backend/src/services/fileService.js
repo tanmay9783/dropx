@@ -11,7 +11,7 @@ export const fileService = {
   /**
    * Authorizes file upload and generates a local upload URL.
    */
-  async requestUploadUrl({ roomCode, participantId, fileName, contentType, sizeBytes }) {
+  async requestUploadUrl({ roomCode, participantId, fileName, contentType, sizeBytes, deviceName }) {
     // 1. Verify room exists and is active
     await roomService.getRoom(roomCode);
 
@@ -82,6 +82,7 @@ export const fileService = {
       createdAt,
       status: 'pending',
       storageProvider: 'local',
+      deviceName,
     });
 
     return {
@@ -152,6 +153,7 @@ export const fileService = {
       mimeType: record.mimeType,
       sizeBytes: Number(actualSize),
       createdAt: record.createdAt,
+      deviceName: record.deviceName,
     };
 
     // Broadcast Socket.IO file-uploaded event (metadata ONLY)
@@ -182,6 +184,7 @@ export const fileService = {
       mimeType: r.mimeType,
       sizeBytes: Number(r.sizeBytes),
       createdAt: r.createdAt,
+      deviceName: r.deviceName,
     }));
   },
 

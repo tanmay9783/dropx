@@ -298,7 +298,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
                     <div className="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       <span className="font-mono font-semibold text-cyan-600 dark:text-cyan-400">{formatBytes(file.sizeBytes)}</span>
                       <span>•</span>
-                      <span>{isUploader ? 'Uploaded by You' : 'Uploaded by Member'}</span>
+                      <span className="truncate max-w-[120px] sm:max-w-xs">{isUploader ? 'Uploaded by You' : `Uploaded by ${file.deviceName || 'Member'}`}</span>
                     </div>
                   </div>
                 </div>

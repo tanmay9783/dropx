@@ -56,7 +56,7 @@ export function useRoomSocket({
 
     setStatus('CONNECTING');
 
-    const socketUrl = window.location.origin;
+    const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
 
     const socket = io(socketUrl, {
       path: '/socket.io',

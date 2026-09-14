@@ -11,6 +11,7 @@ interface ActiveRoomProps {
   room: RoomData;
   participantId: string;
   socketToken: string;
+  roomKey?: string | null;
   onExpire: () => void;
   onLeave: () => void;
 }
@@ -19,9 +20,22 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
   room,
   participantId,
   socketToken,
+  roomKey: propRoomKey,
   onExpire,
   onLeave,
 }) => {
+  // Extract key from URL fragment #key=... if available
+  const [roomKey, setRoomKey] = React.useState<string | null>(propRoomKey || null);
+
+  React.useEffect(() => {
+    if (!roomKey && typeof window !== 'undefined' && window.location.hash) {
+      const match = window.location.hash.match(/key=([^&]+)/);
+      if (match && match[1]) {
+        setRoomKey(match[1]);
+      }
+    }
+  }, [roomKey]);
+
   const { formattedTime, isExpired } = useCountdownTimer(room.expiresAt, onExpire);
 
   // File Transfer Hook
@@ -31,6 +45,8 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     uploading,
     downloadingId,
     uploadProgress,
+    uploadSpeedFormatted,
+    etaFormatted,
     error: fileError,
     handleUploadFiles,
     handleDownloadFile,
@@ -41,6 +57,7 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     roomCode: room.roomCode,
     socketToken,
     participantId,
+    roomKey,
   });
 
   // Real-Time Socket Presence & File Events
@@ -148,12 +165,15 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
         <SharedFiles
           roomCode={room.roomCode}
           socketToken={socketToken}
+          roomKey={roomKey}
           currentParticipantId={participantId}
           files={files}
           loading={filesLoading}
           uploading={uploading}
           downloadingId={downloadingId}
           uploadProgress={uploadProgress}
+          uploadSpeedFormatted={uploadSpeedFormatted}
+          etaFormatted={etaFormatted}
           error={fileError}
           onUpload={handleUploadFiles}
           onDownload={handleDownloadFile}

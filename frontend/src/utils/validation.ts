@@ -13,11 +13,12 @@ export function isValidRoomCode(code: string): boolean {
  * Prefers current window origin if available (so LAN testing auto-uses computer IP),
  * falling back to VITE_APP_BASE_URL or localhost:5173.
  */
-export function getJoinUrl(roomCode: string): string {
+export function getJoinUrl(roomCode: string, roomKey?: string): string {
   const cleanCode = roomCode.trim().toUpperCase();
   const baseUrl =
     typeof window !== 'undefined' && window.location.origin
       ? window.location.origin
       : import.meta.env.VITE_APP_BASE_URL || 'http://localhost:5173';
-  return `${baseUrl}/join/${cleanCode}`;
+  const url = `${baseUrl}/join/${cleanCode}`;
+  return roomKey ? `${url}#key=${roomKey}` : url;
 }

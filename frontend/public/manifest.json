@@ -1,0 +1,26 @@
+{
+  "short_name": "DropX",
+  "name": "DropX — QR File Sharing Platform",
+  "description": "Instant cross-device file sharing using QR codes and zero-knowledge encryption.",
+  "icons": [
+    {
+      "src": "https://api.iconify.design/lucide:qr-code.svg?color=%2306b6d4",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#090d16",
+  "theme_color": "#06b6d4",
+  "display": "standalone",
+  "orientation": "any",
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

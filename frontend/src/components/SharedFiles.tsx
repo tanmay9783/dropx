@@ -11,20 +11,26 @@ import {
   RefreshCw, 
   HardDrive,
   FileCheck2,
-  Sparkles
+  Sparkles,
+  Zap,
+  Clock
 } from 'lucide-react';
 import { SharedFile } from '../services/api';
 import { formatBytes } from '../utils/format';
+import { TextSnippets } from './TextSnippets';
 
 interface SharedFilesProps {
   roomCode?: string;
   socketToken?: string;
+  roomKey?: string | null;
   currentParticipantId?: string;
   files: SharedFile[];
   loading: boolean;
   uploading: boolean;
   downloadingId?: string | null;
   uploadProgress: number;
+  uploadSpeedFormatted?: string;
+  etaFormatted?: string;
   error: string | null;
   onUpload: (files: FileList | File[]) => void;
   onDownload?: (fileId: string) => void;
@@ -32,12 +38,17 @@ interface SharedFilesProps {
 }
 
 export const SharedFiles: React.FC<SharedFilesProps> = ({
+  roomCode,
+  socketToken,
+  roomKey,
   currentParticipantId,
   files,
   loading,
   uploading,
   downloadingId,
   uploadProgress,
+  uploadSpeedFormatted,
+  etaFormatted,
   error,
   onUpload,
   onDownload,
@@ -46,15 +57,27 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [recentUploadName, setRecentUploadName] = useState<string | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setRecentUploadName(e.target.files[0].name);
-      onUpload(e.target.files);
+      processFiles(e.target.files);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  const processFiles = (fileList: FileList | File[]) => {
+    const filesArray = Array.from(fileList);
+    setRecentUploadName(filesArray[0]?.name || 'files');
+
+    // Create local object URL previews for images
+    const imageFiles = filesArray.filter((f) => f.type.startsWith('image/'));
+    const urls = imageFiles.map((f) => URL.createObjectURL(f));
+    setPreviewUrls(urls);
+
+    onUpload(fileList);
   };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -74,8 +97,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
     e.stopPropagation();
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setRecentUploadName(e.dataTransfer.files[0].name);
-      onUpload(e.dataTransfer.files);
+      processFiles(e.dataTransfer.files);
     }
   }, [onUpload]);
 
@@ -163,9 +185,18 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
           <Sparkles className="w-3.5 h-3.5" />
           <span>Encrypted Direct File Upload</span>
         </div>
+
+        {/* Thumbnail Previews during upload selection */}
+        {previewUrls.length > 0 && !uploading && (
+          <div className="flex items-center space-x-2 mt-4">
+            {previewUrls.slice(0, 4).map((url, i) => (
+              <img key={i} src={url} alt="preview" className="w-10 h-10 object-cover rounded-lg border border-cyan-500/30 shadow-xs" />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Uploading Progress Bar Card */}
+      {/* Uploading Speedometer & Progress Bar Card */}
       {uploading && (
         <div className="mt-4 p-4 rounded-2xl glass-panel border border-cyan-500/40 shadow-lg shadow-cyan-500/10 animate-fade-in">
           <div className="flex items-center justify-between text-xs font-bold text-cyan-600 dark:text-cyan-400 mb-2">
@@ -173,8 +204,24 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
               <RefreshCw className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
               <span className="truncate">Uploading {recentUploadName || 'file'}...</span>
             </div>
-            <span className="font-mono text-sm ml-2">{uploadProgress}%</span>
+
+            <div className="flex items-center space-x-3 text-xs font-mono">
+              {uploadSpeedFormatted && (
+                <span className="flex items-center space-x-1 text-emerald-500">
+                  <Zap className="w-3 h-3" />
+                  <span>{uploadSpeedFormatted}</span>
+                </span>
+              )}
+              {etaFormatted && (
+                <span className="flex items-center space-x-1 text-slate-400">
+                  <Clock className="w-3 h-3" />
+                  <span>ETA: {etaFormatted}</span>
+                </span>
+              )}
+              <span className="font-mono text-sm font-black">{uploadProgress}%</span>
+            </div>
           </div>
+
           <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-300 dark:border-slate-700">
             <div
               className="h-full bg-gradient-to-r from-cyan-500 to-violet-500 transition-all duration-300 rounded-full"
@@ -189,6 +236,15 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
         <div className="mt-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs flex items-center space-x-2">
           <span>{error}</span>
         </div>
+      )}
+
+      {/* Live Text Snippets & Clipboard Sync Component */}
+      {roomCode && socketToken && (
+        <TextSnippets
+          roomCode={roomCode}
+          socketToken={socketToken}
+          roomKey={roomKey}
+        />
       )}
 
       {/* Files List Header */}

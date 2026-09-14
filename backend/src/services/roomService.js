@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 import { roomRepository } from '../db/roomRepository.js';
+import { snippetRepository } from '../db/snippetRepository.js';
 import { generateRoomCode, generateOwnerToken, generateParticipantId, generateUuid, safeCompare } from '../utils/crypto.js';
 import { generateSocketToken } from '../utils/token.js';
 import { createError } from '../utils/errors.js';
@@ -133,6 +134,7 @@ export const roomService = {
     }
 
     await roomRepository.updateRoomStatus(roomCode, 'expired');
+    await snippetRepository.deleteSnippetsByRoom(roomCode);
     broadcastRoomExpired(roomCode);
 
     return { success: true, message: 'Room destroyed successfully' };

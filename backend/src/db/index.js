@@ -56,6 +56,14 @@ export async function initDb() {
       );
       CREATE INDEX IF NOT EXISTS idx_files_room_code ON files(room_code);
       CREATE INDEX IF NOT EXISTS idx_files_status ON files(status);
+
+      CREATE TABLE IF NOT EXISTS snippets (
+        id VARCHAR(64) PRIMARY KEY,
+        room_code VARCHAR(16) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_snippets_room_code ON snippets(room_code);
     `);
   } else {
     const { default: sqlite3 } = await import('sqlite3');
@@ -98,7 +106,7 @@ export async function initDb() {
       },
     };
 
-    // Create rooms and files tables in SQLite
+    // Create rooms, files, and snippets tables in SQLite
     await dbDriver.exec(`
       CREATE TABLE IF NOT EXISTS rooms (
         id TEXT PRIMARY KEY,
@@ -126,6 +134,14 @@ export async function initDb() {
       );
       CREATE INDEX IF NOT EXISTS idx_files_room_code ON files(room_code);
       CREATE INDEX IF NOT EXISTS idx_files_status ON files(status);
+
+      CREATE TABLE IF NOT EXISTS snippets (
+        id TEXT PRIMARY KEY,
+        room_code TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_snippets_room_code ON snippets(room_code);
     `);
   }
 }

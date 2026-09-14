@@ -1,18 +1,23 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getFiles, uploadFile, deleteFile, requestDownloadUrl, SharedFile } from '../services/api';
+import { encryptBlob, decryptBlob } from '../utils/crypto';
+import { formatBytes } from '../utils/format';
 
 interface UseRoomFilesOptions {
   roomCode: string | null;
   socketToken: string | null;
   participantId?: string;
+  roomKey?: string | null;
 }
 
-export function useRoomFiles({ roomCode, socketToken }: UseRoomFilesOptions) {
+export function useRoomFiles({ roomCode, socketToken, roomKey }: UseRoomFilesOptions) {
   const [files, setFiles] = useState<SharedFile[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadSpeedFormatted, setUploadSpeedFormatted] = useState<string>('');
+  const [etaFormatted, setEtaFormatted] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   // Fetch initial files list
@@ -40,6 +45,8 @@ export function useRoomFiles({ roomCode, socketToken }: UseRoomFilesOptions) {
 
     setUploading(true);
     setUploadProgress(0);
+    setUploadSpeedFormatted('');
+    setEtaFormatted('');
     setError(null);
 
     const filesArray = Array.from(fileList);
@@ -47,9 +54,33 @@ export function useRoomFiles({ roomCode, socketToken }: UseRoomFilesOptions) {
     try {
       for (let i = 0; i < filesArray.length; i++) {
         const file = filesArray[i];
-        const res = await uploadFile(roomCode, socketToken, file, (percent) => {
-          setUploadProgress(percent);
-        });
+        let payload: Blob = file;
+
+        // Transparent Zero-Knowledge Encrypt if roomKey present
+        if (roomKey) {
+          payload = await encryptBlob(file, roomKey);
+        }
+
+        const startTime = Date.now();
+
+        const res = await uploadFile(
+          roomCode,
+          socketToken,
+          payload,
+          file.name,
+          (percent, loadedBytes, totalBytes) => {
+            setUploadProgress(percent);
+
+            const elapsedSec = (Date.now() - startTime) / 1000;
+            if (elapsedSec > 0.2 && loadedBytes > 0) {
+              const bps = loadedBytes / elapsedSec;
+              setUploadSpeedFormatted(`${formatBytes(bps)}/s`);
+              const remainingBytes = totalBytes - loadedBytes;
+              const remainingSec = Math.ceil(remainingBytes / bps);
+              setEtaFormatted(remainingSec > 0 ? `${remainingSec}s` : '0s');
+            }
+          }
+        );
 
         // Optimistically add to files state if not already added by socket
         setFiles((prev) => {
@@ -62,26 +93,46 @@ export function useRoomFiles({ roomCode, socketToken }: UseRoomFilesOptions) {
     } finally {
       setUploading(false);
       setUploadProgress(0);
+      setUploadSpeedFormatted('');
+      setEtaFormatted('');
     }
   };
 
-  // Handle local storage file download
+  // Handle local storage file download with decryption support
   const handleDownloadFile = async (fileId: string) => {
     if (!roomCode || !socketToken) return;
     setDownloadingId(fileId);
     setError(null);
     try {
-      const { downloadUrl } = await requestDownloadUrl(roomCode, fileId, socketToken);
-      const anchor = document.createElement('a');
+      const { downloadUrl, fileName } = await requestDownloadUrl(roomCode, fileId, socketToken);
       const finalUrl = downloadUrl.startsWith('/') ? `${import.meta.env.VITE_API_URL || ''}${downloadUrl}` : downloadUrl;
-      anchor.href = finalUrl;
-      anchor.target = '_blank';
-      anchor.rel = 'noopener noreferrer';
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
+
+      if (roomKey) {
+        // Fetch raw ciphertext blob and decrypt locally
+        const response = await fetch(finalUrl);
+        const encryptedBlob = await response.blob();
+        const fileObj = files.find((f) => f.id === fileId);
+        const decryptedBlob = await decryptBlob(encryptedBlob, roomKey, fileObj?.mimeType);
+
+        const objectUrl = URL.createObjectURL(decryptedBlob);
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(objectUrl);
+      } else {
+        const anchor = document.createElement('a');
+        anchor.href = finalUrl;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to generate download URL');
+      setError(err.message || 'Failed to download file');
     } finally {
       setDownloadingId(null);
     }
@@ -116,6 +167,8 @@ export function useRoomFiles({ roomCode, socketToken }: UseRoomFilesOptions) {
     uploading,
     downloadingId,
     uploadProgress,
+    uploadSpeedFormatted,
+    etaFormatted,
     error,
     handleUploadFiles,
     handleDownloadFile,

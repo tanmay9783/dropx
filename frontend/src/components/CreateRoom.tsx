@@ -25,6 +25,7 @@ import { useRoomFiles } from '../hooks/useRoomFiles';
 import { SharedFiles } from './SharedFiles';
 import { ConnectedDevices } from './ConnectedDevices';
 import { getJoinUrl } from '../utils/validation';
+import { generateRoomKey } from '../utils/crypto';
 
 interface CreateRoomProps {
   room: RoomData;
@@ -48,9 +49,14 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
   const [sharedNative, setSharedNative] = useState<boolean>(false);
   const [destroying, setDestroying] = useState<boolean>(false);
   const [destroyError, setDestroyError] = useState<string | null>(null);
+  const [roomKey, setRoomKey] = useState<string | null>(null);
   const qrRef = useRef<HTMLDivElement | null>(null);
 
-  const joinUrl = getJoinUrl(room.roomCode);
+  React.useEffect(() => {
+    generateRoomKey().then(setRoomKey);
+  }, []);
+
+  const joinUrl = getJoinUrl(room.roomCode, roomKey || undefined);
   const { formattedTime, isExpired } = useCountdownTimer(room.expiresAt, onExpire);
 
   // File Transfer Hook
@@ -60,6 +66,8 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
     uploading,
     downloadingId,
     uploadProgress,
+    uploadSpeedFormatted,
+    etaFormatted,
     error: fileError,
     handleUploadFiles,
     handleDownloadFile,
@@ -69,6 +77,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
   } = useRoomFiles({
     roomCode: room.roomCode,
     socketToken,
+    roomKey,
   });
 
   // Real-Time Socket Presence & File Events
@@ -334,11 +343,14 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
         <SharedFiles
           roomCode={room.roomCode}
           socketToken={socketToken}
+          roomKey={roomKey}
           files={files}
           loading={filesLoading}
           uploading={uploading}
           downloadingId={downloadingId}
           uploadProgress={uploadProgress}
+          uploadSpeedFormatted={uploadSpeedFormatted}
+          etaFormatted={etaFormatted}
           error={fileError}
           onUpload={handleUploadFiles}
           onDownload={handleDownloadFile}

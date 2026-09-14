@@ -23,6 +23,9 @@ const roomJoinLimiter = createLimiter({
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many room join attempts, please try again later.' } },
 });
 
+import { snippetController } from '../controllers/snippetController.js';
+import { authenticateRoomAccess } from '../middleware/auth.js';
+
 // Create Room
 router.post('/rooms', roomCreationLimiter, roomController.createRoom);
 
@@ -34,5 +37,10 @@ router.post('/rooms/:roomCode/join', roomJoinLimiter, validateRoomCodeParam, roo
 
 // Destroy Room
 router.delete('/rooms/:roomCode', validateRoomCodeParam, validateAuthorizationHeader, roomController.destroyRoom);
+
+// Text Snippets Routes
+router.get('/rooms/:roomCode/snippets', validateRoomCodeParam, authenticateRoomAccess, snippetController.getSnippets);
+router.post('/rooms/:roomCode/snippets', validateRoomCodeParam, authenticateRoomAccess, snippetController.createSnippet);
+router.delete('/rooms/:roomCode/snippets/:snippetId', validateRoomCodeParam, authenticateRoomAccess, snippetController.deleteSnippet);
 
 export default router;

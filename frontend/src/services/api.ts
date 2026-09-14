@@ -148,8 +148,8 @@ export async function requestUploadUrl(
 
 export async function uploadFileStorage(
   uploadUrl: string,
-  file: File,
-  onProgress?: (percent: number) => void
+  file: File | Blob,
+  onProgress?: (percent: number, loadedBytes: number, totalBytes: number) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -161,7 +161,7 @@ export async function uploadFileStorage(
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           const percent = Math.round((e.loaded / e.total) * 100);
-          onProgress(percent);
+          onProgress(percent, e.loaded, e.total);
         }
       };
     }
@@ -205,17 +205,37 @@ export async function completeUpload(
 export async function uploadFile(
   roomCode: string,
   socketToken: string,
-  file: File,
-  onProgress?: (percent: number) => void
+  file: File | Blob,
+  fileName?: string,
+  onProgress?: (percent: number, loadedBytes: number, totalBytes: number) => void
 ): Promise<{ file: SharedFile }> {
   // 1. Request presigned upload URL
-  const { uploadUrl, fileId } = await requestUploadUrl(roomCode, socketToken, file);
+  const fileToUpload = file as File;
+  const name = fileName || fileToUpload.name || 'file';
+  const size = file.size;
+
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files/upload-url`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${socketToken}`,
+    },
+    body: JSON.stringify({
+      fileName: name,
+      contentType: file.type || 'application/octet-stream',
+      sizeBytes: size,
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Failed to request upload URL');
+  }
 
   // 2. Upload file directly to server local storage
-  await uploadFileStorage(uploadUrl, file, onProgress);
+  await uploadFileStorage(data.uploadUrl, file, onProgress);
 
   // 3. Confirm completion with server
-  return completeUpload(roomCode, fileId, socketToken);
+  return completeUpload(roomCode, data.fileId, socketToken);
 }
 
 export async function getFiles(roomCode: string, socketToken: string): Promise<{ files: SharedFile[] }> {
@@ -261,3 +281,54 @@ export async function requestDownloadUrl(
   }
   return data;
 }
+
+export interface TextSnippet {
+  id: string;
+  roomCode: string;
+  content: string;
+  createdAt: string;
+}
+
+export async function getSnippets(roomCode: string, socketToken: string): Promise<{ snippets: TextSnippet[] }> {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/snippets`, {
+    headers: {
+      Authorization: `Bearer ${socketToken}`,
+    },
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Failed to fetch room snippets');
+  }
+  return data;
+}
+
+export async function createSnippet(roomCode: string, socketToken: string, content: string): Promise<{ snippet: TextSnippet }> {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/snippets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${socketToken}`,
+    },
+    body: JSON.stringify({ content }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Failed to share snippet');
+  }
+  return data;
+}
+
+export async function deleteSnippet(roomCode: string, snippetId: string, socketToken: string): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/snippets/${snippetId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${socketToken}`,
+    },
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Failed to delete snippet');
+  }
+  return data;
+}
+

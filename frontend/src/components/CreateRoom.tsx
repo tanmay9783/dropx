@@ -50,6 +50,8 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
   const [destroying, setDestroying] = useState<boolean>(false);
   const [destroyError, setDestroyError] = useState<string | null>(null);
   const [roomKey, setRoomKey] = useState<string | null>(null);
+  const [newSnippet, setNewSnippet] = useState<any>(null);
+  const [deletedSnippetId, setDeletedSnippetId] = useState<string | null>(null);
   const qrRef = useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -87,6 +89,8 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
     onRoomExpired: onExpire,
     onFileUploaded: addFileFromSocket,
     onFileDeleted: removeFileFromSocket,
+    onSnippetCreated: setNewSnippet,
+    onSnippetDeleted: setDeletedSnippetId,
   });
 
   const handleCopyCode = async () => {
@@ -355,6 +359,8 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           onUpload={handleUploadFiles}
           onDownload={handleDownloadFile}
           onDelete={handleDeleteFile}
+          newSnippet={newSnippet}
+          deletedSnippetId={deletedSnippetId}
         />
 
         {destroyError && (

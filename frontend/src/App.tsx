@@ -125,35 +125,35 @@ export const App: React.FC = () => {
             </div>
 
             {/* Hero Heading */}
-            <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.15] mb-4">
+            <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.15] mb-4 animate-fade-in-up">
               Share Files & Text Instantly.<br />
               <span className="gradient-text">Zero Login Required.</span>
             </h1>
 
             {/* Hero Description */}
-            <p className="text-sm sm:text-base text-slate-400 max-w-lg mb-8 leading-relaxed font-normal">
+            <p className="text-sm sm:text-base text-slate-400 max-w-lg mb-8 leading-relaxed font-normal animate-fade-in-up delay-100">
               Scan the QR code from any mobile device or PC to share files and live clipboard text in seconds.
             </p>
 
             {createError && (
-              <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center space-x-2 max-w-md w-full">
+              <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center space-x-2 max-w-md w-full animate-fade-in-up delay-100">
                 <AlertCircle className="w-4 h-4 text-rose-500" />
                 <span>{createError}</span>
               </div>
             )}
 
             {/* Main Action CTAs */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md mb-12">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md mb-12 animate-fade-in-up delay-200">
               <button
                 onClick={handleCreateRoom}
-                className="w-full sm:w-1/2 min-h-[52px] py-3.5 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center justify-center space-x-2 shadow-xl shadow-yellow-500/20 transition-all transform active:scale-95"
+                className="w-full sm:w-1/2 min-h-[52px] py-3.5 px-6 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-sm flex items-center justify-center space-x-2 shadow-xl shadow-yellow-500/20 transition-all transform hover:scale-[1.02] active:scale-95"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Room</span>
               </button>
               <button
                 onClick={() => setAppState('JOIN_MANUAL')}
-                className="w-full sm:w-1/2 min-h-[52px] py-3.5 px-6 rounded-2xl glass-panel hover:bg-slate-900 text-yellow-400 font-bold text-sm flex items-center justify-center space-x-2 border border-yellow-500/30 transition-all transform active:scale-95 shadow-sm"
+                className="w-full sm:w-1/2 min-h-[52px] py-3.5 px-6 rounded-2xl glass-panel hover:bg-slate-900 text-yellow-400 font-bold text-sm flex items-center justify-center space-x-2 border border-yellow-500/30 transition-all transform hover:scale-[1.02] active:scale-95 shadow-sm"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Join with Code</span>
@@ -161,8 +161,8 @@ export const App: React.FC = () => {
             </div>
 
             {/* Clean 2-Card Feature Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-left">
-              <div className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-yellow-500/40 transition-all">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-left animate-fade-in-up delay-300">
+              <div className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-yellow-500/40 transition-all hover:-translate-y-1">
                 <div className="h-10 w-10 rounded-xl bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center justify-center mb-3">
                   <QrCode className="w-5 h-5" />
                 </div>
@@ -174,7 +174,7 @@ export const App: React.FC = () => {
                 </p>
               </div>
 
-              <div className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-yellow-500/40 transition-all">
+              <div className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-yellow-500/40 transition-all hover:-translate-y-1">
                 <div className="h-10 w-10 rounded-xl bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center justify-center mb-3">
                   <Cloud className="w-5 h-5" />
                 </div>
@@ -185,6 +185,18 @@ export const App: React.FC = () => {
                   Transfer files up to 100MB and sync copied text notes in real-time.
                 </p>
               </div>
+            </div>
+
+            {/* Recruiter / Portfolio Section */}
+            <div className="mt-8 w-full glass-panel-subtle p-5 sm:p-6 rounded-2xl border border-yellow-500/20 text-left animate-fade-in-up delay-300 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-yellow-500/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out"></div>
+              <h3 className="text-sm font-bold text-yellow-400 mb-2 flex items-center space-x-2">
+                <Zap className="w-4 h-4" />
+                <span>Built for Performance & Scale</span>
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
+                DropX is engineered by Tanmay to demonstrate full-stack proficiency. Built using React, Node.js, and WebSocket architecture, this application features real-time bidirectional syncing, robust session management, and ephemeral storage. The UI leverages custom CSS properties and Tailwind for a state-of-the-art glassmorphism design, providing a buttery-smooth, responsive user experience across all devices.
+              </p>
             </div>
           </div>
         )}
@@ -250,7 +262,7 @@ export const App: React.FC = () => {
         <div className="flex items-center space-x-2">
           <span className="font-bold text-slate-700 dark:text-slate-300">DropX Platform</span>
           <span>•</span>
-          <span>Self-Hosted Edition</span>
+          <span className="text-yellow-500/80 font-medium">Created by Tanmay</span>
         </div>
         <div className="flex items-center space-x-4 font-mono text-[11px]">
           <span>High-Speed Local Storage</span>

@@ -73,7 +73,8 @@ export function useRoomFiles({ roomCode, socketToken }: UseRoomFilesOptions) {
     try {
       const { downloadUrl } = await requestDownloadUrl(roomCode, fileId, socketToken);
       const anchor = document.createElement('a');
-      anchor.href = downloadUrl;
+      const finalUrl = downloadUrl.startsWith('/') ? `${import.meta.env.VITE_API_URL || ''}${downloadUrl}` : downloadUrl;
+      anchor.href = finalUrl;
       anchor.target = '_blank';
       anchor.rel = 'noopener noreferrer';
       document.body.appendChild(anchor);

@@ -153,7 +153,8 @@ export async function uploadFileStorage(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('PUT', uploadUrl);
+    const finalUrl = uploadUrl.startsWith('/') ? `${API_BASE}${uploadUrl}` : uploadUrl;
+    xhr.open('PUT', finalUrl);
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
 
     if (xhr.upload && onProgress) {

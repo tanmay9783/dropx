@@ -14,7 +14,7 @@ export const fileRepository = {
     sizeBytes,
     createdAt,
     status = 'pending',
-    storageProvider = 's3',
+    storageProvider = 'local',
   }) {
     const db = getDb();
     const sql = `

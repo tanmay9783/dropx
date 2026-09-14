@@ -211,8 +211,8 @@ export async function uploadFile(
   // 1. Request presigned upload URL
   const { uploadUrl, fileId } = await requestUploadUrl(roomCode, socketToken, file);
 
-  // 2. Upload file directly to S3
-  await uploadToS3(uploadUrl, file, onProgress);
+  // 2. Upload file directly to server local storage
+  await uploadFileStorage(uploadUrl, file, onProgress);
 
   // 3. Confirm completion with server
   return completeUpload(roomCode, fileId, socketToken);

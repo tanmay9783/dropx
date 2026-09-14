@@ -16,7 +16,7 @@ const app = express();
 app.set('trust proxy', env.TRUST_PROXY_HOPS);
 
 // Security HTTP headers
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 // CORS configuration
 app.use(

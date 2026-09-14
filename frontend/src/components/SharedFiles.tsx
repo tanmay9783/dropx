@@ -242,7 +242,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
-                  {/* Presigned S3 download button */}
+                  {/* Direct download button */}
                   <button
                     onClick={() => onDownload && onDownload(file.id)}
                     disabled={isDownloading}

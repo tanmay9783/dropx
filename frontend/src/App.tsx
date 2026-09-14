@@ -140,7 +140,7 @@ export const App: React.FC = () => {
           {/* Health Badge */}
           <div className="glass-panel px-3.5 py-1.5 rounded-full flex items-center space-x-2 text-xs font-semibold border border-slate-200 dark:border-slate-800 shadow-sm">
             <Server className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline text-slate-500 dark:text-slate-400">AWS Node:</span>
+            <span className="hidden sm:inline text-slate-500 dark:text-slate-400">Server Node:</span>
             {healthLoading ? (
               <RefreshCw className="w-3.5 h-3.5 text-amber-400 animate-spin" />
             ) : healthError ? (

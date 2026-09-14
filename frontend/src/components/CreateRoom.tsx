@@ -186,11 +186,11 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
 
   return (
     <div className="max-w-2xl mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl relative transition-colors duration-300">
-      {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 pb-5 mb-6">
+      {/* Top Mobile Sticky Header */}
+      <div className="sticky top-2 z-30 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80 p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-lg flex items-center justify-between mb-6">
         <button
           onClick={onBack}
-          className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+          className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors py-1 px-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 min-h-[36px]"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Exit Session</span>
@@ -201,7 +201,8 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           {socketStatus === 'CONNECTED' ? (
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
               <Wifi className="w-3.5 h-3.5" />
-              <span>Real-Time Signaling Active</span>
+              <span className="hidden sm:inline">Real-Time Signaling Active</span>
+              <span className="sm:hidden text-[11px]">Live</span>
             </div>
           ) : socketStatus === 'CONNECTING' ? (
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold">

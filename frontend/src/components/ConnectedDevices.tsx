@@ -27,18 +27,17 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
         ...(participantCount > 1 ? [{ id: currentParticipantId || 'guest-1', role: 'participant', deviceName: 'Guest Device' }] : [])
       ];
 
-  const getDeviceIcon = (id: string, role: string) => {
-    if (role === 'owner') return <Crown className="w-4 h-4 text-amber-400" />;
-    const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return hash % 2 === 0 ? (
-      <Smartphone className="w-4 h-4 text-cyan-400" />
-    ) : (
-      <Laptop className="w-4 h-4 text-violet-400" />
-    );
+  const getDeviceIcon = (p: ParticipantInfo) => {
+    if (p.role === 'owner') return <Crown className="w-4 h-4 text-amber-400" />;
+    const name = (p.deviceName || '').toLowerCase();
+    if (name.includes('iphone') || name.includes('ipad') || name.includes('phone') || name.includes('android') || name.includes('samsung') || name.includes('pixel') || name.includes('xiaomi') || name.includes('moto')) {
+      return <Smartphone className="w-4 h-4 text-cyan-400" />;
+    }
+    return <Laptop className="w-4 h-4 text-violet-400" />;
   };
 
   const getDeviceLabel = (p: ParticipantInfo) => {
-    if (p.role === 'owner') return p.deviceName || 'Host (Room Creator)';
+    if (p.role === 'owner') return p.deviceName || 'Host Device';
     return p.deviceName || `Device #${p.id.substring(0, 4)}`;
   };
 
@@ -72,7 +71,7 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
             >
               <div className="flex items-center space-x-2.5 min-w-0">
                 <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-slate-700">
-                  {getDeviceIcon(p.id, p.role)}
+                  {getDeviceIcon(p)}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center space-x-1.5">

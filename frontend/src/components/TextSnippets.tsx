@@ -206,10 +206,24 @@ export const TextSnippets: React.FC<TextSnippetsProps> = ({ roomCode, socketToke
                 <div className="flex items-center space-x-1.5 flex-shrink-0">
                   <button
                     onClick={() => handleCopy(s.id, displayText)}
-                    className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition-colors"
+                    className={`py-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all ${
+                      isCopied
+                        ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                        : 'bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600'
+                    }`}
                     title="Copy text"
                   >
-                    {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    {isCopied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-[10px] font-bold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-cyan-500" />
+                        <span className="text-[10px]">Copy</span>
+                      </>
+                    )}
                   </button>
 
                   <button

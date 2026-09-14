@@ -1,190 +1,146 @@
-# ⚡ DropX — Ephemeral Cross-Device File & Text Sync Platform
+# DropX
 
-[![Node.js Version](https://img.shields.io/badge/node.js-v18%2B-green.svg)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue.svg)](https://www.typescriptlang.org/)
-[![Socket.IO](https://img.shields.io/badge/Socket.IO-4.7-black.svg)](https://socket.io/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8.svg)](https://tailwindcss.com/)
-[![Docker Ready](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-**DropX** is a high-performance, production-grade, temporary QR-based file and text sharing platform. Designed for instant cross-device transfers between mobile devices, laptops, and tablets without requiring accounts, logins, or permanent storage persistence.
+Ephemeral, cross-device file and text sharing platform built for fast transfers between phones, laptops, and tablets. Pair devices in seconds via dynamic QR code with zero account creation and automated data destruction.
 
 ---
 
-## 🌟 Key Highlights & Engineering Features
+## Why DropX?
 
-- ⚡ **Zero-Friction QR Pairing**: Instantly connect secondary devices (iOS/Android/Desktop) via dynamic QR codes or 6-digit room keys.
-- 🔄 **Real-Time WebSocket Sync**: Bi-directional event synchronization via **Socket.IO** with sub-50ms latency for room presence, live clipboard notes, and file activity.
-- 🔒 **Zero Data Persistence Security**: Ephemeral memory model. Files and live text snippets automatically self-destruct upon room expiration or tab close with **0% database disk persistence**.
-- 🛡️ **Enterprise Security Standards**: Rate limiting (Redis-backed in cluster mode), dynamic security tokens, Helmet security headers, CORS origin isolation, and Zod schema validations.
-- 💾 **Dual-Storage Engine**: Supports high-speed local disk storage with streaming upload URLs and easy adaptability for S3-compatible cloud object stores.
-- 🧹 **Automated Self-Healing Cleanup**: Background cron workers monitor active rooms and pending uploads, executing atomic file purges to prevent storage leaks.
-- 🎨 **OLED Dark Mode Interface**: Built with React, TypeScript, Vite, and Tailwind CSS featuring dynamic glassmorphism and ambient glow responsive design.
+Transferring files or clipboard snippets between different operating systems (like iOS, Android, Linux, and Windows) usually means emailing yourself, using third-party messaging apps that compress media, or uploading to cloud storage services that permanently retain your data.
+
+DropX is designed as a lightweight, zero-footprint alternative:
+
+1. **Zero Setup**: Open the app, click create, scan the QR code from any camera-enabled device, and you're paired.
+2. **Zero Permanent Persistence**: Files and clipboard text live strictly within temporary memory/ephemeral disk storage. When the room expires or is destroyed, all data is automatically unlinked and wiped.
+3. **Real-Time Signaling**: WebSockets synchronize connection state, active peer lists, file uploads, and text snippets across all paired devices with sub-50ms latency.
 
 ---
 
-## 🏗️ System Architecture
+## Architecture Overview
 
-```mermaid
-graph TD
-    subgraph Clients
-        Mobile[📱 Mobile Browser]
-        Desktop[💻 Desktop Browser]
-    end
-
-    subgraph Frontend ["React 18 + Vite + TS + Tailwind"]
-        UI[App Dashboard & Active Room UI]
-        SocketClient[Socket.IO Client Sync]
-    end
-
-    subgraph Backend ["Node.js + Express API Layer"]
-        API[REST API Routes]
-        SocketServer[Socket.IO Server Engine]
-        Security[Helmet / Rate Limiter / Zod]
-    end
-
-    subgraph Storage & Workers
-        DB[(SQLite / PostgreSQL)]
-        Disk[📁 Ephemeral Storage /data/uploads]
-        Cleaner[⏱️ Background Cleanup Worker]
-    end
-
-    Mobile <-->|QR Code / HTTP| UI
-    Desktop <-->|HTTP| UI
-    UI <-->|WebSocket Events| SocketServer
-    UI <-->|REST Calls| API
-    API --> Security
-    API --> DB
-    API --> Disk
-    Cleaner -->|Cron Purge Expiry| DB
-    Cleaner -->|Unlink Files| Disk
+```
+                      ┌─────────────────────────────────┐
+                      │    Mobile & Desktop Clients     │
+                      └────────────────┬────────────────┘
+                                       │
+                    ┌──────────────────┴──────────────────┐
+                    │                                     │
+             HTTP / REST Calls                     WebSocket Stream
+         (Auth, Upload, Download)               (Room State, Text, Events)
+                    │                                     │
+                    ▼                                     ▼
+      ┌───────────────────────────────────────────────────────────┐
+      │                   Express.js & Socket.IO                  │
+      │   - Helmet & CORS Headers                                 │
+      │   - IP & Route Rate Limiters (Redis-ready)                │
+      │   - Zod Schema Validation & Auth Guards                   │
+      └─────────────┬─────────────────────────────┬───────────────┘
+                    │                             │
+                    ▼                             ▼
+      ┌───────────────────────────┐ ┌─────────────────────────────┐
+      │     SQLite / Postgres     │ │  Ephemeral Disk Storage     │
+      │  (Room & File Metadata)   │ │      (./data/uploads)       │
+      └─────────────▲─────────────┘ └─────────────▲───────────────┘
+                    │                             │
+                    └──────────────┬──────────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │  Automated Cleanup Worker   │
+                    │   (TTL & Orphan File Purge) │
+                    └─────────────────────────────┘
 ```
 
 ---
 
-## 🔄 Ephemeral File & Room Lifecycle
+## Engineering Highlights & Design Decisions
 
-DropX manages room state and uploaded assets using an automated state machine that prevents orphaned files and memory leaks:
+### 1. Streaming Uploads with Bound Memory Usage
+Handling concurrent 100MB file uploads in a Node.js process without blowing up the V8 heap requires avoiding in-memory multipart buffering. DropX uses streaming endpoints (`express.raw`) that pipe incoming binary payloads directly to disk, keeping Node.js memory consumption low regardless of file size.
 
-```
-           [ Client Requests Upload URL ]
-                         │
-                         ▼
-                ┌─────────────────┐
-                │   PENDING FILE  │ ──(Exceeds TTL: 30m)──► [ Auto-Purged ]
-                └─────────────────┘
-                         │
-              (Upload Complete & Verified)
-                         │
-                         ▼
-                ┌─────────────────┐
-                │   ACTIVE FILE   │ ──(Download / Stream Active)
-                └─────────────────┘
-                         │
-          ┌──────────────┴──────────────┐
-          ▼                             ▼
-   [ User Deletes ]             [ Room Expires ]
-          │                             │
-          └──────────────┬──────────────┘
-                         │
-                         ▼
-                ┌─────────────────┐
-                │ DELETED/EXPIRED │ ──► [ Local File System Unlinked ]
-                └─────────────────┘
-```
+### 2. Ephemeral Security & Scoped Tokens
+* **Room Isolation**: Each session generates a random alphanumeric room code paired with an owner secret and a socket auth token.
+* **Granular Roles**: Only the room creator holds owner permissions (e.g., immediate room destruction). Joined devices receive temporary participant credentials valid only for the room's lifespan.
+* **Strict Payload Caps**: Standard 100MB upload limits, 100KB JSON payload caps, and parameterized request validation using **Zod**.
 
-### Lifecycle Phases
-1. **`pending` Phase**: Triggered when a client initializes a file transfer (`POST /api/rooms/:roomCode/files/upload-url`). Uncompleted uploads older than `PENDING_FILE_TTL_MINUTES` are automatically swept by background workers.
-2. **Streaming Upload**: Byte streams write directly to encrypted temporary storage via streaming endpoints.
-3. **Verification (`/complete`)**: Backend validates physical file existence, MIME signature, and payload size bounds before transitioning state to `active` and notifying all connected peers over WebSockets.
-4. **`active` Phase**: Files are available for direct streaming or download.
-5. **Self-Destruction Purge**: When a room reaches its expiration limit or all participants disconnect, background cleanup routines immediately unlink physical files from storage and wipe session metadata.
+### 3. Self-Healing Lifecycle & Garbage Collection
+To prevent disk exhaustion from abandoned or partial uploads, DropX implements a deterministic state machine:
+* **Pending Uploads**: Marked as `pending` upon URL request. If not completed within `PENDING_FILE_TTL_MINUTES` (default 30m), background workers sweep the file and metadata.
+* **Active Rooms**: Rooms remain active for `ROOM_TTL_MINUTES` (default 2h). A scheduled worker (`setInterval` / cron) evaluates expired rooms every 60s and hard-deletes all associated disk assets.
+
+### 4. Real-Time Distributed Signaling
+The Socket.IO layer manages room presence and broadcasts upload notifications in real time. It is architected with `@socket.io/redis-adapter` compatibility, allowing seamless horizontal scaling across multiple Node.js instances behind a load balancer.
 
 ---
 
-## 💻 Tech Stack & Tooling
+## Repository Structure
 
-| Component | Technology | Description |
-| :--- | :--- | :--- |
-| **Frontend Framework** | React 18, TypeScript, Vite | Fast SPA bundle with full type safety |
-| **Styling & UI** | Tailwind CSS, Lucide React | OLED Dark Mode, custom glassmorphism & responsive layouts |
-| **Real-Time Messaging** | Socket.IO Client | Real-time presence, clipboard sync, and room notifications |
-| **Backend Runtime** | Node.js (ES Modules), Express.js | Event-driven asynchronous REST API |
-| **Real-Time Engine** | Socket.IO, `@socket.io/redis-adapter` | WebSockets server supporting multi-node Redis pub/sub scaling |
-| **Data & State Persistence** | SQLite3 (Dev) / PostgreSQL (Prod) | In-memory session tracking & metadata storage |
-| **Security & Validation** | Zod, Helmet, Express-Rate-Limit | Strict schema validation, HTTP security headers, rate limiting |
-| **Logging** | Pino, Pino-HTTP | High-performance JSON logging with pretty printing |
-| **Containerization** | Docker, Docker Compose | Production container setup |
-
----
-
-## ⚙️ Environment Configuration
-
-Both frontend and backend rely on configurable environment variables. Sample files are included in the repository.
-
-### Backend Config (`backend/.env`)
-
-```env
-PORT=3000
-NODE_ENV=development
-
-# Storage Configuration
-STORAGE_PROVIDER=local
-LOCAL_STORAGE_DIR=./data/uploads
-
-# Lifecycle & Expiry Settings
-ROOM_TTL_MINUTES=120
-ROOM_CLEANUP_INTERVAL_MS=60000
-PENDING_FILE_TTL_MINUTES=30
-UPLOAD_URL_EXPIRY_SECONDS=300
-DOWNLOAD_URL_EXPIRY_SECONDS=300
-
-# Platform Limits
-MAX_FILE_SIZE_MB=100
-MAX_FILES_PER_ROOM=20
-MAX_ROOM_STORAGE_BYTES=524288000
-
-# CORS Security
-CORS_ORIGIN=http://localhost:5173
+```
+dropx/
+├── backend/
+│   ├── src/
+│   │   ├── config/          # Environment variables & runtime configuration
+│   │   ├── controllers/     # Request handlers (Room, File, Snippet)
+│   │   ├── db/              # Database connection & repository abstraction (SQLite / PG)
+│   │   ├── jobs/            # Scheduled cleanup workers & TTL sweepers
+│   │   ├── middleware/      # Rate limiting, auth, Zod validation, error handling
+│   │   ├── routes/          # REST route definitions
+│   │   ├── services/        # Business logic (File streaming, room lifecycle)
+│   │   ├── sockets/         # Socket.IO connection handling & room events
+│   │   └── server.js        # Application entrypoint & HTTP server
+│   └── tests/               # Automated integration test suites
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # UI Views (ActiveRoom, JoinPage, TextSnippets, etc.)
+│   │   ├── hooks/           # Custom React hooks (useRoomSocket, useFileUpload)
+│   │   ├── services/        # API client & upload handlers
+│   │   ├── utils/           # Device detection, formatting & helpers
+│   │   └── App.tsx          # Main state router & UI shell
+│   └── vite.config.ts       # Vite build configuration
+│
+└── docker-compose.yml       # Production container orchestration
 ```
 
 ---
 
-## 🚀 Quick Start & Local Setup
+## Tech Stack
+
+* **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, Socket.IO Client.
+* **Backend**: Node.js (ESM), Express 4, Socket.IO 4, Zod, Helmet, Pino, Rate-Limit.
+* **Storage & DB**: Local filesystem storage (with S3 adapter interface), SQLite (development) / PostgreSQL (production).
+* **Testing**: Node.js native test runner (`node --test`), Supertest, Socket.IO Client.
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- **Node.js** `>= 18.x`
-- **npm** `>= 9.x`
+* Node.js `>= 18.0.0`
+* npm `>= 9.0.0`
 
-### 1. Clone Repository
-```bash
-git clone https://github.com/tanmay9783/dropx.git
-cd dropx
-```
+### 1. Local Development
 
-### 2. Start Backend Server
+#### Start Backend
 ```bash
 cd backend
 npm install
 npm run dev
 ```
-- Server starts at: `http://localhost:3000`
-- Health check endpoint: `http://localhost:3000/api/health`
+The server will start on `http://localhost:3000`. Health check available at `http://localhost:3000/api/health`.
 
-### 3. Start Frontend Application
+#### Start Frontend
 ```bash
-cd ../frontend
+cd frontend
 npm install
 npm run dev
 ```
-- Web App starts at: `http://localhost:5173`
+The Vite development server will start on `http://localhost:5173`.
 
 ---
 
-## 🐳 Docker Deployment
+### 2. Docker Deployment
 
-Run the complete platform stack using Docker Compose:
+Run the complete multi-container stack with Docker Compose:
 
 ```bash
 docker-compose up --build -d
@@ -192,52 +148,62 @@ docker-compose up --build -d
 
 ---
 
-## 📡 API Reference & Socket Events
+## Configuration Reference
 
-### Key REST Endpoints
+Key environment variables configurable in `backend/.env`:
 
-| Method | Endpoint | Description |
+| Variable | Default | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/rooms` | Create a new temporary room & owner security token |
-| `POST` | `/api/rooms/join` | Join an existing room via 6-digit code |
-| `GET` | `/api/rooms/:roomCode` | Fetch active room state & files |
-| `POST` | `/api/rooms/:roomCode/files/upload-url` | Generate temporary upload authorization |
-| `POST` | `/api/rooms/:roomCode/files/complete` | Confirm upload completion and notify room |
-| `GET` | `/api/rooms/:roomCode/files/:fileId/download-url` | Obtain short-lived secure download token |
-| `POST` | `/api/rooms/:roomCode/text` | Broadcast live text snippet / clipboard note |
-| `GET` | `/api/health` | Service health status check |
-
-### Real-Time Socket Events
-
-| Event Name | Direction | Payload | Description |
-| :--- | :--- | :--- | :--- |
-| `join-room` | Client ➔ Server | `{ roomCode, socketToken }` | Connect socket to active room channel |
-| `peer-joined` | Server ➔ Client | `{ participantId, totalPeers }` | Notify connected devices of new peer |
-| `file-uploaded` | Server ➔ Client | `{ fileMetadata }` | Live updates when a file upload completes |
-| `file-deleted` | Server ➔ Client | `{ fileId }` | Sync file removal across all connected devices |
-| `text-created` | Server ➔ Client | `{ textSnippet }` | Instant live text/clipboard sync across devices |
+| `PORT` | `3000` | HTTP & WebSocket server port |
+| `STORAGE_PROVIDER` | `local` | Storage driver (`local` or `s3`) |
+| `LOCAL_STORAGE_DIR` | `./data/uploads` | Directory for temporary file storage |
+| `MAX_FILE_SIZE_MB` | `100` | Maximum allowed file size per upload |
+| `MAX_FILES_PER_ROOM` | `20` | File quota per room |
+| `ROOM_TTL_MINUTES` | `120` | Lifetime before a room and its files are destroyed |
+| `PENDING_FILE_TTL_MINUTES` | `30` | Expiration window for unconfirmed uploads |
+| `ROOM_CLEANUP_INTERVAL_MS`| `60000` | Frequency of background cleanup job (ms) |
+| `CORS_ORIGIN` | `http://localhost:5173` | Allowed origins for cross-origin requests |
 
 ---
 
-## 🧪 Testing & Verification
+## API & WebSocket Protocol
 
-The project includes integration tests covering room creation, file lifecycle, upload flow, and API error states:
+### REST Endpoints
+
+* `POST /api/rooms` — Create an ephemeral room and receive owner token.
+* `POST /api/rooms/:roomCode/join` — Join an active room with code validation.
+* `GET  /api/rooms/:roomCode` — Fetch current room metadata and file list.
+* `POST /api/rooms/:roomCode/files/upload-url` — Request authorization for a file upload.
+* `PUT  /api/rooms/:roomCode/files/:fileId/upload` — Direct binary stream upload.
+* `POST /api/rooms/:roomCode/files/:fileId/complete` — Verify size/stat and mark file active.
+* `GET  /api/rooms/:roomCode/files/:fileId/download` — Stream file content to client.
+* `DELETE /api/rooms/:roomCode/files/:fileId` — Delete a file from room and unlink from disk.
+* `GET  /api/rooms/:roomCode/snippets` — Retrieve shared text snippets.
+* `POST /api/rooms/:roomCode/snippets` — Broadcast a new clipboard note.
+
+### Real-Time Socket Events
+
+* `join-room` (`Client -> Server`): Authenticate and join room channel with `{ roomCode, socketToken }`.
+* `peer-joined` (`Server -> Client`): Broadcast updated peer count to room members.
+* `file-uploaded` (`Server -> Client`): Push new file metadata when an upload completes.
+* `file-deleted` (`Server -> Client`): Notify connected clients to remove file from state.
+* `text-created` (`Server -> Client`): Broadcast newly pasted text snippet instantly.
+
+---
+
+## Test Suite
+
+The project includes an integration test suite covering security headers, rate limiting, room lifecycle, streaming file uploads, and Socket.IO real-time events.
 
 ```bash
 cd backend
 npm test
 ```
 
----
-
-## 👤 Author
-
-**Tanmay**  
-- GitHub: [@tanmay9783](https://github.com/tanmay9783)  
-- Focus: Full-Stack Web Development, Real-Time Distributed Systems & Security Architecture.
+All 32 tests execute with zero dependencies on external test runners using Node's native test harness.
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the [MIT License](LICENSE).
+MIT License. See [LICENSE](LICENSE) for details.

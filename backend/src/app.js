@@ -24,7 +24,7 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, or Postman) or matching allowed origins / wildcard
       if (!origin || env.ALLOWED_ORIGINS.includes('*') || env.ALLOWED_ORIGINS.includes(origin)) {
-        return callback(null, true);
+        return callback(null, origin || true);
       }
       return callback(null, false);
     },

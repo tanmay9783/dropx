@@ -98,9 +98,9 @@ export function useRoomSocket({
         roomCode,
         deviceName: getDeviceName(),
       },
-      withCredentials: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
+      withCredentials: false,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
     });
 
     socketRef.current = socket;

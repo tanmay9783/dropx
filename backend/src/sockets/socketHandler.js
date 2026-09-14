@@ -99,7 +99,12 @@ async function clearRoomPresence(roomCode) {
 export function initSocketIo(httpServer) {
   io = new SocketIoServer(httpServer, {
     cors: {
-      origin: env.ALLOWED_ORIGINS.includes('*') ? '*' : env.ALLOWED_ORIGINS,
+      origin: (origin, callback) => {
+        if (!origin || env.ALLOWED_ORIGINS.includes('*') || env.ALLOWED_ORIGINS.includes(origin)) {
+          return callback(null, origin || true);
+        }
+        return callback(null, false);
+      },
       credentials: true,
     },
     path: '/socket.io',

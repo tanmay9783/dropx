@@ -53,16 +53,25 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('popstate', syncRouteFromLocation);
   }, []);
 
+  const [isWakingUp, setIsWakingUp] = useState<boolean>(false);
+
   const checkStatus = async () => {
     setHealthLoading(true);
     setHealthError(null);
+    setIsWakingUp(false);
+
+    // If backend takes more than 3 seconds to respond, it's likely waking up from free-tier sleep
+    const wakeTimer = setTimeout(() => setIsWakingUp(true), 3000);
+
     try {
       const data = await fetchHealth();
       setHealth(data);
     } catch (err: any) {
       setHealthError(err.message || 'Failed to connect to backend server');
     } finally {
+      clearTimeout(wakeTimer);
       setHealthLoading(false);
+      setIsWakingUp(false);
     }
   };
 
@@ -142,7 +151,10 @@ export const App: React.FC = () => {
             <Server className="w-3.5 h-3.5 text-slate-400" />
             <span className="hidden sm:inline text-slate-500 dark:text-slate-400">Server Node:</span>
             {healthLoading ? (
-              <RefreshCw className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+              <span className="flex items-center text-amber-500 font-bold text-[11px] sm:text-xs">
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                {isWakingUp ? 'Waking server (~30s)...' : 'Connecting...'}
+              </span>
             ) : healthError ? (
               <span className="flex items-center text-rose-500 font-bold">
                 <AlertCircle className="w-3.5 h-3.5 mr-1" /> Offline

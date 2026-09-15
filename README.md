@@ -1,6 +1,6 @@
 # DropX
 
-**DropX** is an ephemeral, cross-device file and clipboard synchronization system designed for high-speed transfers across heterogeneous environments (iOS, Android, Linux, macOS, Windows). 
+**DropX** is an ephemeral, cross-device file and clipboard synchronization system engineered for high-speed transfers across heterogeneous environments (iOS, Android, Linux, macOS, Windows). 
 
 It pairs devices via dynamic QR codes or short-lived room keys without requiring user registration, authentication accounts, or permanent cloud persistence. Once a session expires or is closed, all associated memory buffers and disk assets are automatically unlinked and permanently destroyed.
 
@@ -13,7 +13,7 @@ Sharing files, photos, or text snippets between devices across different operati
 - **Privacy & Persistence**: Cloud storage drives (Google Drive, Dropbox) require logins and leave permanent file logs.
 - **Compression & Bloat**: Messaging platforms (WhatsApp, Slack) degrade original asset resolution and clutter chat history.
 
-DropX solves this by providing a lightweight, peer-coordinated sharing runtime where files stream directly over WebSockets and temporary storage with zero long-term retention.
+DropX provides a lightweight, peer-coordinated sharing runtime where files stream directly over WebSockets and temporary storage with zero long-term retention.
 
 ---
 
@@ -264,8 +264,3 @@ npm test
 - **Background Sweeper**: Tests automatic eviction of expired rooms and orphan pending files.
 - **WebSocket Synchronization**: Verifies token handshake authorization and real-time room broadcasting.
 
----
-
-## License
-
-This project is open-source and licensed under the [MIT License](LICENSE).

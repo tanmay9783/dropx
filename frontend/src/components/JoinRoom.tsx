@@ -13,6 +13,63 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isPermissionDenied, setIsPermissionDenied] = useState<boolean>(false);
+  const [isRequestingCamera, setIsRequestingCamera] = useState<boolean>(false);
+
+  const handleStartQrScan = async () => {
+    setIsRequestingCamera(true);
+    setCameraError(null);
+    setIsPermissionDenied(false);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Camera access is not supported on this browser. Please use Chrome or Safari, or upload a QR image.');
+      setIsScannerOpen(true);
+      setIsRequestingCamera(false);
+      return;
+    }
+
+    try {
+      // Calling getUserMedia directly within the user click handler ensures user gesture activation
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+
+      setCameraStream(stream);
+      setCameraError(null);
+      setIsPermissionDenied(false);
+      setIsScannerOpen(true);
+    } catch (err: any) {
+      const isDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError';
+      setIsPermissionDenied(isDenied);
+      setCameraError(
+        isDenied
+          ? 'Camera permission is blocked for this site. You can unblock it via the lock icon or upload a QR screenshot below.'
+          : 'Unable to open camera on this device. You can choose a QR image from your gallery.'
+      );
+      setIsScannerOpen(true);
+    } finally {
+      setIsRequestingCamera(false);
+    }
+  };
+
+  const handleCloseScanner = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((t) => t.stop());
+      setCameraStream(null);
+    }
+    setIsScannerOpen(false);
+  };
 
   const performJoin = async (targetCode: string) => {
     setLoading(true);
@@ -85,11 +142,21 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
       {/* Built-in Camera QR Scan Button */}
       <button
         type="button"
-        onClick={() => setIsScannerOpen(true)}
-        className="w-full py-3.5 px-4 mb-5 rounded-2xl bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-400 border border-yellow-500/30 font-bold text-xs flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-sm"
+        onClick={handleStartQrScan}
+        disabled={isRequestingCamera}
+        className="w-full py-3.5 px-4 mb-5 rounded-2xl bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-400 border border-yellow-500/30 font-bold text-xs flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-sm disabled:opacity-75 cursor-pointer"
       >
-        <Camera className="w-4 h-4 text-yellow-400 animate-pulse" />
-        <span>Scan QR Code with Camera</span>
+        {isRequestingCamera ? (
+          <>
+            <Camera className="w-4 h-4 text-yellow-400 animate-spin" />
+            <span>Waiting for Camera Permission...</span>
+          </>
+        ) : (
+          <>
+            <Camera className="w-4 h-4 text-yellow-400 animate-pulse" />
+            <span>Scan QR Code with Camera</span>
+          </>
+        )}
       </button>
 
       <div className="relative flex py-1 items-center mb-5">
@@ -142,8 +209,11 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
       {/* Camera QR Scanner Viewfinder Modal */}
       {isScannerOpen && (
         <QrScannerModal
+          initialStream={cameraStream}
+          initialError={cameraError}
+          initialPermissionDenied={isPermissionDenied}
           onScan={handleScanSuccess}
-          onClose={() => setIsScannerOpen(false)}
+          onClose={handleCloseScanner}
         />
       )}
     </div>

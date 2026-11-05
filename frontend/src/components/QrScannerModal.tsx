@@ -3,19 +3,28 @@ import { Camera, X, RefreshCw, Upload, AlertCircle, Sparkles, Check, Lock } from
 import jsQR from 'jsqr';
 
 interface QrScannerModalProps {
+  initialStream?: MediaStream | null;
+  initialError?: string | null;
+  initialPermissionDenied?: boolean;
   onScan: (code: string, key?: string | null) => void;
   onClose: () => void;
 }
 
-export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose }) => {
+export const QrScannerModal: React.FC<QrScannerModalProps> = ({
+  initialStream,
+  initialError,
+  initialPermissionDenied,
+  onScan,
+  onClose,
+}) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isPermissionDenied, setIsPermissionDenied] = useState(false);
+  const [loading, setLoading] = useState(!initialStream && !initialError);
+  const [error, setError] = useState<string | null>(initialError || null);
+  const [isPermissionDenied, setIsPermissionDenied] = useState(!!initialPermissionDenied);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const [detectedCode, setDetectedCode] = useState<string | null>(null);
@@ -95,7 +104,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
   };
 
   // Start Camera Stream with automatic fallback
-  const startCamera = useCallback(async () => {
+  const startCameraWithMode = useCallback(async (mode: 'environment' | 'user') => {
     setLoading(true);
     setError(null);
     setIsPermissionDenied(false);
@@ -118,7 +127,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
       // 1. Try with preferred camera facingMode
       stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: facingMode },
+          facingMode: { ideal: mode },
         },
         audio: false,
       });
@@ -171,9 +180,46 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
     } catch {
       // Ignore enumeration error
     }
-  }, [facingMode]);
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    return startCameraWithMode(facingMode);
+  }, [facingMode, startCameraWithMode]);
 
   useEffect(() => {
+    if (initialStream) {
+      streamRef.current = initialStream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = initialStream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.muted = true;
+        videoRef.current.play().catch(() => {});
+      }
+      setLoading(false);
+      setError(null);
+      setIsPermissionDenied(false);
+
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.enumerateDevices) {
+        navigator.mediaDevices
+          .enumerateDevices()
+          .then((devices) => {
+            const videoDevices = devices.filter((d) => d.kind === 'videoinput');
+            if (videoDevices.length > 1) {
+              setHasMultipleCameras(true);
+            }
+          })
+          .catch(() => {});
+      }
+      return;
+    }
+
+    if (initialError) {
+      setError(initialError);
+      setIsPermissionDenied(!!initialPermissionDenied);
+      setLoading(false);
+      return;
+    }
+
     startCamera();
 
     return () => {
@@ -182,7 +228,17 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
         streamRef.current = null;
       }
     };
-  }, [startCamera]);
+  }, [initialStream, initialError, initialPermissionDenied, startCamera]);
+
+  // Ensure stream is attached to video element as soon as viewfinder mounts
+  useEffect(() => {
+    if (videoRef.current && streamRef.current && videoRef.current.srcObject !== streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.setAttribute('playsinline', 'true');
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [loading, error]);
 
   // Real-time Frame Scanning Loop
   useEffect(() => {
@@ -289,8 +345,10 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
     reader.readAsDataURL(file);
   };
 
-  const toggleCamera = () => {
-    setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
+  const toggleCamera = async () => {
+    const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(nextMode);
+    await startCameraWithMode(nextMode);
   };
 
   return (

@@ -26,6 +26,7 @@ import { useRoomFiles } from '../hooks/useRoomFiles';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { SharedFiles } from './SharedFiles';
 import { ConnectedDevices } from './ConnectedDevices';
+import { ScreenShareCard } from './ScreenShareCard';
 import { ScreenShareModal } from './ScreenShareModal';
 import { getJoinUrl } from '../utils/validation';
 import { deriveRoomKey } from '../utils/crypto';
@@ -114,6 +115,13 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
 
   const guestDevice = participants.find((p) => p.id && p.id !== currentParticipantId);
   const guestDeviceName = guestDevice?.deviceName || 'Guest Device';
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (remoteStream) {
+      setIsViewerOpen(true);
+    }
+  }, [remoteStream]);
 
   const handleCopyCode = async () => {
     try {
@@ -390,6 +398,19 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           isOwner={true}
         />
 
+        {/* P2P Live Screen Share & Remote Viewer Card */}
+        <ScreenShareCard
+          isSharingScreen={isSharingScreen}
+          hasRemoteStream={!!remoteStream}
+          participantCount={participantCount}
+          p2pStatus={p2pStatus}
+          supportsScreenShare={supportsScreenShare}
+          onStartShare={startScreenShare}
+          onStopShare={stopScreenShare}
+          onOpenViewer={() => setIsViewerOpen(true)}
+          peerDeviceName={guestDeviceName}
+        />
+
         {/* Shared Files Component */}
         <SharedFiles
           roomCode={room.roomCode}
@@ -433,11 +454,11 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
         </button>
 
         {/* Remote Screen Share Live Viewer */}
-        {remoteStream && (
+        {remoteStream && isViewerOpen && (
           <ScreenShareModal
             stream={remoteStream}
             peerDeviceName={guestDeviceName}
-            onClose={stopScreenShare}
+            onClose={() => setIsViewerOpen(false)}
           />
         )}
       </div>

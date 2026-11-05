@@ -9,14 +9,10 @@ import 'prismjs/components/prism-markdown';
 
 export const SUPPORTED_LANGUAGES = [
   { id: 'auto', label: 'Auto-Detect' },
-  { id: 'markdown', label: 'Markdown (.md)' },
-  { id: 'json', label: 'JSON (.json)' },
-  { id: 'javascript', label: 'JavaScript (.js)' },
-  { id: 'typescript', label: 'TypeScript (.ts)' },
-  { id: 'python', label: 'Python (.py)' },
-  { id: 'sql', label: 'SQL (.sql)' },
-  { id: 'bash', label: 'Bash / Shell (.sh)' },
-  { id: 'plaintext', label: 'Plain Text (.txt)' },
+  { id: 'code', label: 'Code' },
+  { id: 'markdown', label: 'Markdown' },
+  { id: 'json', label: 'JSON' },
+  { id: 'plaintext', label: 'Plain Text' },
 ];
 
 export function detectLanguage(text: string): string {
@@ -62,8 +58,15 @@ export function detectLanguage(text: string): string {
 }
 
 export function highlightCode(code: string, language: string): string {
-  const resolvedLang = language === 'auto' ? detectLanguage(code) : language;
-  const grammar = Prism.languages[resolvedLang] || Prism.languages.plaintext;
+  let resolvedLang = language;
+  if (language === 'auto') {
+    resolvedLang = detectLanguage(code);
+  } else if (language === 'code') {
+    const detected = detectLanguage(code);
+    resolvedLang = detected !== 'plaintext' ? detected : 'javascript';
+  }
+
+  const grammar = Prism.languages[resolvedLang] || Prism.languages.javascript || Prism.languages.plaintext;
   if (!grammar) {
     return escapeHtml(code);
   }
@@ -80,6 +83,7 @@ export function getFileExtensionForLang(language: string): string {
       return 'json';
     case 'markdown':
       return 'md';
+    case 'code':
     case 'javascript':
       return 'js';
     case 'typescript':

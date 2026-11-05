@@ -7,6 +7,7 @@ import { useRoomFiles } from '../hooks/useRoomFiles';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { SharedFiles } from './SharedFiles';
 import { ConnectedDevices } from './ConnectedDevices';
+import { ScreenShareCard } from './ScreenShareCard';
 import { ScreenShareModal } from './ScreenShareModal';
 
 interface ActiveRoomProps {
@@ -92,6 +93,13 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
 
   const peerDevice = participants.find((p) => p.id && p.id !== participantId);
   const peerDeviceName = peerDevice?.deviceName || 'Host Device';
+  const [isViewerOpen, setIsViewerOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (remoteStream) {
+      setIsViewerOpen(true);
+    }
+  }, [remoteStream]);
 
   return (
     <div className="max-w-2xl mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl transition-colors duration-300">
@@ -209,6 +217,19 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
           isOwner={false}
         />
 
+        {/* P2P Live Screen Share & Remote Viewer Card */}
+        <ScreenShareCard
+          isSharingScreen={isSharingScreen}
+          hasRemoteStream={!!remoteStream}
+          participantCount={participantCount}
+          p2pStatus={p2pStatus}
+          supportsScreenShare={supportsScreenShare}
+          onStartShare={startScreenShare}
+          onStopShare={stopScreenShare}
+          onOpenViewer={() => setIsViewerOpen(true)}
+          peerDeviceName={peerDeviceName}
+        />
+
         {/* Shared Files Component */}
         <SharedFiles
           roomCode={room.roomCode}
@@ -235,11 +256,11 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
         />
 
         {/* Remote Screen Share Live Viewer */}
-        {remoteStream && (
+        {remoteStream && isViewerOpen && (
           <ScreenShareModal
             stream={remoteStream}
             peerDeviceName={peerDeviceName}
-            onClose={stopScreenShare}
+            onClose={() => setIsViewerOpen(false)}
           />
         )}
       </div>

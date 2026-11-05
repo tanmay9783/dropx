@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Camera, X, RefreshCw, Upload, AlertCircle, Sparkles, Check } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Camera, X, RefreshCw, Upload, AlertCircle, Sparkles, Check, Lock } from 'lucide-react';
 import jsQR from 'jsqr';
 
 interface QrScannerModalProps {
@@ -15,6 +15,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPermissionDenied, setIsPermissionDenied] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const [detectedCode, setDetectedCode] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
         return { code: foundCode, key: foundKey };
       }
     } catch {
-      // Not a valid URL, search anywhere in text for a 6-character room token
+      // Search anywhere in text for a 6-character room token
       const match = trimmed.match(/\b([2-9A-Z]{6})\b/i);
       if (match) {
         return { code: match[1].toUpperCase() };
@@ -93,76 +94,101 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
     }, 400);
   };
 
-  // Start Camera Stream
-  useEffect(() => {
-    let active = true;
+  // Start Camera Stream with automatic fallback
+  const startCamera = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setIsPermissionDenied(false);
 
-    const startCamera = async () => {
-      setLoading(true);
-      setError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('Camera access is not supported on this browser. Please use Chrome or Safari, or upload a QR image.');
+      setLoading(false);
+      return;
+    }
 
-      // Stop any existing stream
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
+    // Stop any existing stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
 
+    let stream: MediaStream | null = null;
+
+    try {
+      // 1. Try with preferred camera facingMode
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: facingMode },
+        },
+        audio: false,
+      });
+    } catch (firstErr: any) {
+      // 2. Fallback to basic unconstrained video
       try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter((d) => d.kind === 'videoinput');
-        if (videoDevices.length > 1) {
-          setHasMultipleCameras(true);
-        }
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: facingMode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
           audio: false,
         });
-
-        if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.setAttribute('playsinline', 'true');
-          await videoRef.current.play();
-        }
-        setLoading(false);
-      } catch (err: any) {
-        if (!active) return;
+      } catch (fallbackErr: any) {
+        const isDenied = fallbackErr.name === 'NotAllowedError' || fallbackErr.name === 'PermissionDeniedError';
+        setIsPermissionDenied(isDenied);
         setError(
-          err.name === 'NotAllowedError'
-            ? 'Camera permission denied. Please allow camera access in your browser settings.'
-            : 'Unable to start camera. You can also upload a QR code image below.'
+          isDenied
+            ? 'Camera permission is blocked for this site. You can unblock it via the lock icon or upload a QR screenshot below.'
+            : 'Unable to open camera on this device. You can choose a QR image from your gallery.'
         );
         setLoading(false);
+        return;
       }
-    };
+    }
 
+    if (!stream) {
+      setError('Camera stream could not be started.');
+      setLoading(false);
+      return;
+    }
+
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.setAttribute('playsinline', 'true');
+      videoRef.current.muted = true;
+      try {
+        await videoRef.current.play();
+      } catch {
+        // Autoplay may need user gesture
+      }
+    }
+    setLoading(false);
+
+    // Check for multiple cameras only after permissions are active
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter((d) => d.kind === 'videoinput');
+      if (videoDevices.length > 1) {
+        setHasMultipleCameras(true);
+      }
+    } catch {
+      // Ignore enumeration error
+    }
+  }, [facingMode]);
+
+  useEffect(() => {
     startCamera();
 
     return () => {
-      active = false;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
       }
     };
-  }, [facingMode]);
+  }, [startCamera]);
 
   // Real-time Frame Scanning Loop
   useEffect(() => {
     let animationFrameId: number;
     let scanning = true;
 
-    // Check for native BarcodeDetector API support
     const BarcodeDetectorClass = (window as any).BarcodeDetector;
     let barcodeDetector: any = null;
     if (BarcodeDetectorClass) {
@@ -180,7 +206,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
       const canvas = canvasRef.current;
 
       if (video && video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
-        // 1. Try hardware-accelerated BarcodeDetector if available
+        // 1. Try BarcodeDetector if available
         if (barcodeDetector) {
           try {
             const barcodes = await barcodeDetector.detect(video);
@@ -194,11 +220,11 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
               }
             }
           } catch {
-            // Fall back to jsQR below
+            // Fall back to jsQR
           }
         }
 
-        // 2. Fallback to jsQR frame analysis
+        // 2. jsQR Canvas fallback
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (ctx) {
           canvas.width = video.videoWidth;
@@ -231,7 +257,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
     };
   }, [detectedCode]);
 
-  // Handle uploaded QR image decoding
+  // Handle uploaded QR image from gallery / files
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -256,7 +282,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
             return;
           }
         }
-        setError('No valid DropX QR code was found in this image.');
+        setError('No valid DropX QR code was found in this image. Please choose another photo or screenshot.');
       };
       img.src = event.target?.result as string;
     };
@@ -305,16 +331,51 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
         {/* Viewfinder Area */}
         <div className="relative aspect-square w-full bg-black flex items-center justify-center overflow-hidden">
           {error ? (
-            <div className="p-6 text-center flex flex-col items-center space-y-3 max-w-xs text-xs text-rose-300">
-              <AlertCircle className="w-8 h-8 text-rose-500" />
-              <p>{error}</p>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="py-2 px-4 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold flex items-center space-x-2 transition-all"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Upload QR Image</span>
-              </button>
+            <div className="p-6 text-center flex flex-col items-center space-y-4 max-w-xs text-xs text-slate-300">
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+
+              <div>
+                <p className="font-bold text-sm text-white mb-1">
+                  {isPermissionDenied ? 'Camera Access Blocked' : 'Camera Unavailable'}
+                </p>
+                <p className="text-slate-400 leading-relaxed text-[11px]">
+                  {error}
+                </p>
+              </div>
+
+              {isPermissionDenied && (
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-[10px] text-slate-300 text-left space-y-1 w-full">
+                  <div className="flex items-center space-x-1 font-semibold text-yellow-400">
+                    <Lock className="w-3 h-3" />
+                    <span>How to unblock in Chrome:</span>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-0.5 text-slate-400">
+                    <li>Tap the <strong>🔒 lock icon</strong> beside the URL.</li>
+                    <li>Tap <strong>Permissions</strong> ➔ Enable <strong>Camera</strong>.</li>
+                    <li>Tap <strong>Retry Camera</strong> below.</li>
+                  </ol>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 w-full pt-1">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full py-2.5 px-4 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-md"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Choose QR Image from Gallery</span>
+                </button>
+
+                <button
+                  onClick={startCamera}
+                  className="w-full py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center justify-center space-x-1.5 transition-all text-[11px]"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Retry Camera</span>
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -389,4 +450,3 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
     </div>
   );
 };
-

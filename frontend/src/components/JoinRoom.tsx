@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, LogIn, AlertCircle, KeyRound } from 'lucide-react';
+import { ArrowLeft, LogIn, AlertCircle, KeyRound, Camera } from 'lucide-react';
 import { joinRoom, JoinRoomResponse } from '../services/api';
+import { QrScannerModal } from './QrScannerModal';
 
 interface JoinRoomProps {
   onSuccess: (data: JoinRoomResponse) => void;
@@ -11,20 +12,14 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
   const [code, setCode] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanCode = code.trim().toUpperCase();
-    if (cleanCode.length !== 6) {
-      setError('Please enter a valid 6-character room code.');
-      return;
-    }
-
+  const performJoin = async (targetCode: string) => {
     setLoading(true);
     setError(null);
 
     try {
-      const data = await joinRoom(cleanCode);
+      const data = await joinRoom(targetCode);
       onSuccess(data);
     } catch (err: any) {
       if (err.code === 'ROOM_NOT_FOUND') {
@@ -37,6 +32,24 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = code.trim().toUpperCase();
+    if (cleanCode.length !== 6) {
+      setError('Please enter a valid 6-character room code.');
+      return;
+    }
+    await performJoin(cleanCode);
+  };
+
+  const handleScanSuccess = async (scannedCode: string, scannedKey?: string | null) => {
+    setCode(scannedCode);
+    if (scannedKey) {
+      window.location.hash = `#key=${scannedKey}`;
+    }
+    await performJoin(scannedCode);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,7 +70,7 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
         <span>Back to Home</span>
       </button>
 
-      <div className="text-center mb-8">
+      <div className="text-center mb-6">
         <div className="h-12 w-12 rounded-2xl bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center justify-center mx-auto mb-3">
           <KeyRound className="w-6 h-6" />
         </div>
@@ -65,11 +78,29 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
           Join File Room
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Enter the 6-character room code displayed on the host screen.
+          Scan the QR code or enter the 6-character room code.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Built-in Camera QR Scan Button */}
+      <button
+        type="button"
+        onClick={() => setIsScannerOpen(true)}
+        className="w-full py-3.5 px-4 mb-5 rounded-2xl bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-400 border border-yellow-500/30 font-bold text-xs flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-sm"
+      >
+        <Camera className="w-4 h-4 text-yellow-400 animate-pulse" />
+        <span>Scan QR Code with Camera</span>
+      </button>
+
+      <div className="relative flex py-1 items-center mb-5">
+        <div className="flex-grow border-t border-slate-800"></div>
+        <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+          or enter code manually
+        </span>
+        <div className="flex-grow border-t border-slate-800"></div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 text-center">
             6-Character Room Code
@@ -80,7 +111,7 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
             onChange={handleInputChange}
             placeholder="X7K9P2"
             maxLength={6}
-            className="w-full py-4 text-center text-3xl font-black font-mono tracking-widest bg-slate-50 dark:bg-slate-900/90 border-2 border-slate-200 dark:border-slate-700 focus:border-yellow-400 dark:focus:border-yellow-400 rounded-2xl text-yellow-400 placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none uppercase transition-all shadow-inner"
+            className="w-full py-3.5 text-center text-3xl font-black font-mono tracking-widest bg-slate-50 dark:bg-slate-900/90 border-2 border-slate-200 dark:border-slate-700 focus:border-yellow-400 dark:focus:border-yellow-400 rounded-2xl text-yellow-400 placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none uppercase transition-all shadow-inner"
             autoFocus
           />
         </div>
@@ -107,6 +138,15 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
           )}
         </button>
       </form>
+
+      {/* Camera QR Scanner Viewfinder Modal */}
+      {isScannerOpen && (
+        <QrScannerModal
+          onScan={handleScanSuccess}
+          onClose={() => setIsScannerOpen(false)}
+        />
+      )}
     </div>
   );
 };
+

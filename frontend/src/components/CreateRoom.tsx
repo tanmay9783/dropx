@@ -15,7 +15,8 @@ import {
   DownloadCloud, 
   MessageCircle,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Monitor
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RoomData, destroyRoom } from '../services/api';
@@ -25,6 +26,7 @@ import { useRoomFiles } from '../hooks/useRoomFiles';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { SharedFiles } from './SharedFiles';
 import { ConnectedDevices } from './ConnectedDevices';
+import { ScreenShareModal } from './ScreenShareModal';
 import { getJoinUrl } from '../utils/validation';
 import { deriveRoomKey } from '../utils/crypto';
 
@@ -97,11 +99,21 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
     onSnippetDeleted: setDeletedSnippetId,
   });
 
-  const { p2pStatus } = useWebRTC({
+  const {
+    p2pStatus,
+    isSharingScreen,
+    remoteStream,
+    startScreenShare,
+    stopScreenShare,
+    supportsScreenShare,
+  } = useWebRTC({
     socket,
     currentParticipantId,
     participants,
   });
+
+  const guestDevice = participants.find((p) => p.id && p.id !== currentParticipantId);
+  const guestDeviceName = guestDevice?.deviceName || 'Guest Device';
 
   const handleCopyCode = async () => {
     try {
@@ -206,8 +218,31 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           <span>Exit Session</span>
         </button>
 
-        {/* Real-Time Socket Connection Badge */}
+        {/* Real-Time Socket Connection & Screen Share Badge */}
         <div className="flex items-center space-x-2">
+          {p2pStatus === 'CONNECTED' && supportsScreenShare && (
+            isSharingScreen ? (
+              <button
+                onClick={stopScreenShare}
+                className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold animate-pulse"
+                title="Stop Sharing Screen"
+              >
+                <Monitor className="w-3.5 h-3.5" />
+                <span>Stop Sharing</span>
+              </button>
+            ) : (
+              <button
+                onClick={startScreenShare}
+                className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-semibold transition-all active:scale-95"
+                title="Share Screen directly via P2P"
+              >
+                <Monitor className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Share Screen</span>
+                <span className="sm:hidden">Share</span>
+              </button>
+            )
+          )}
+
           {socketStatus === 'CONNECTED' ? (
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
               <Wifi className="w-3.5 h-3.5" />
@@ -396,6 +431,15 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           <Trash2 className="w-4 h-4" />
           <span>{destroying ? 'Purging Room & File Data...' : 'Terminate Room & Delete Files'}</span>
         </button>
+
+        {/* Remote Screen Share Live Viewer */}
+        {remoteStream && (
+          <ScreenShareModal
+            stream={remoteStream}
+            peerDeviceName={guestDeviceName}
+            onClose={stopScreenShare}
+          />
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,8 @@ interface UseWebRTCOptions {
 export function useWebRTC({ socket, currentParticipantId, participants }: UseWebRTCOptions) {
   const [p2pStatus, setP2PStatus] = useState<P2PConnectionStatus>('DISCONNECTED');
   const [transferProgress, setTransferProgress] = useState<WebRTCFileTransferProgress | null>(null);
+  const [isSharingScreen, setIsSharingScreen] = useState<boolean>(false);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const managerRef = useRef<WebRTCManager | null>(null);
   const activePeerIdRef = useRef<string | null>(null);
 
@@ -74,6 +76,10 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
       }
     });
 
+    manager.onRemoteStream((stream) => {
+      setRemoteStream(stream);
+    });
+
     manager.onFileReceived((receivedFile: P2PReceivedFile) => {
       // Trigger instant direct download in browser
       const objectUrl = URL.createObjectURL(receivedFile.blob);
@@ -113,12 +119,40 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
     []
   );
 
+  const startScreenShare = useCallback(async () => {
+    if (!managerRef.current) return null;
+    const stream = await managerRef.current.startScreenShare();
+    if (stream) {
+      setIsSharingScreen(true);
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        track.onended = () => {
+          setIsSharingScreen(false);
+        };
+      }
+    }
+    return stream;
+  }, []);
+
+  const stopScreenShare = useCallback(async () => {
+    if (!managerRef.current) return;
+    await managerRef.current.stopScreenShare();
+    setIsSharingScreen(false);
+  }, []);
+
+  const supportsScreenShare = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia;
+
   return {
     p2pStatus,
     transferProgress,
     handleSignal,
     sendFileP2P,
     hasP2P: p2pStatus === 'CONNECTED',
+    isSharingScreen,
+    remoteStream,
+    startScreenShare,
+    stopScreenShare,
+    supportsScreenShare,
   };
 }
 

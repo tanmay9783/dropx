@@ -37,8 +37,11 @@ export class WebRTCManager {
   private statusListeners: ((status: P2PConnectionStatus) => void)[] = [];
   private fileReceivedListeners: ((file: P2PReceivedFile) => void)[] = [];
   private progressListeners: ((progress: WebRTCFileTransferProgress) => void)[] = [];
+  private remoteStreamListeners: ((stream: MediaStream | null) => void)[] = [];
 
   public status: P2PConnectionStatus = 'DISCONNECTED';
+  public localStream: MediaStream | null = null;
+  public remoteStream: MediaStream | null = null;
 
   // Receiving state buffer
   private incomingMeta: { id: string; name: string; size: number; mimeType: string } | null = null;
@@ -90,6 +93,14 @@ export class WebRTCManager {
         }
       };
 
+      // Inbound Media Stream for P2P Screen Sharing
+      this.peerConnection.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          this.remoteStream = event.streams[0];
+          this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
+        }
+      };
+
       if (this.isInitiator) {
         // Create DataChannel as initiator
         const dc = this.peerConnection.createDataChannel('dropx-lan-transfer', {
@@ -124,6 +135,12 @@ export class WebRTCManager {
     if (!this.peerConnection || !signal) return;
 
     try {
+      if (signal.type === 'screenshare:stopped') {
+        this.remoteStream = null;
+        this.remoteStreamListeners.forEach((l) => l(null));
+        return;
+      }
+
       if (signal.type === 'offer') {
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
         while (this.pendingCandidates.length > 0) {
@@ -309,8 +326,101 @@ export class WebRTCManager {
     };
   }
 
+  public onRemoteStream(callback: (stream: MediaStream | null) => void) {
+    this.remoteStreamListeners.push(callback);
+    callback(this.remoteStream);
+    return () => {
+      this.remoteStreamListeners = this.remoteStreamListeners.filter((l) => l !== callback);
+    };
+  }
+
+  public async startScreenShare(): Promise<MediaStream | null> {
+    if (!this.peerConnection || !this.socket || !this.targetParticipantId) {
+      throw new Error('Peer connection not established');
+    }
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      throw new Error('Screen sharing is not supported in this browser/device');
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: 'always' } as any,
+        audio: false,
+      });
+
+      this.localStream = stream;
+
+      stream.getVideoTracks().forEach((track) => {
+        this.peerConnection?.addTrack(track, stream);
+        track.onended = () => {
+          this.stopScreenShare();
+        };
+      });
+
+      // Renegotiate SDP with peer
+      const offer = await this.peerConnection.createOffer();
+      await this.peerConnection.setLocalDescription(offer);
+      this.socket.emit('webrtc:signal', {
+        toParticipantId: this.targetParticipantId,
+        signal: { type: 'offer', sdp: this.peerConnection.localDescription },
+      });
+
+      return stream;
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError') {
+        return null; // User cancelled screen selection
+      }
+      throw err;
+    }
+  }
+
+  public async stopScreenShare() {
+    if (this.localStream) {
+      this.localStream.getTracks().forEach((t) => t.stop());
+      this.localStream = null;
+    }
+
+    if (this.peerConnection) {
+      const senders = this.peerConnection.getSenders();
+      senders.forEach((sender) => {
+        if (sender.track && sender.track.kind === 'video') {
+          try {
+            this.peerConnection?.removeTrack(sender);
+          } catch {
+            // Ignore
+          }
+        }
+      });
+
+      if (this.socket && this.targetParticipantId) {
+        this.socket.emit('webrtc:signal', {
+          toParticipantId: this.targetParticipantId,
+          signal: { type: 'screenshare:stopped' },
+        });
+
+        try {
+          const offer = await this.peerConnection.createOffer();
+          await this.peerConnection.setLocalDescription(offer);
+          this.socket.emit('webrtc:signal', {
+            toParticipantId: this.targetParticipantId,
+            signal: { type: 'offer', sdp: this.peerConnection.localDescription },
+          });
+        } catch {
+          // Ignore renegotiation failure on stop
+        }
+      }
+    }
+  }
+
   public destroy() {
     this.pendingCandidates = [];
+    if (this.localStream) {
+      this.localStream.getTracks().forEach((t) => t.stop());
+      this.localStream = null;
+    }
+    this.remoteStream = null;
+    this.remoteStreamListeners.forEach((l) => l(null));
+
     if (this.dataChannel) {
       this.dataChannel.close();
       this.dataChannel = null;

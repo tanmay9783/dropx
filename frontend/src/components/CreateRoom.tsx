@@ -240,7 +240,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
               </button>
             ) : (
               <button
-                onClick={startScreenShare}
+                onClick={() => startScreenShare('screen')}
                 className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-semibold transition-all active:scale-95"
                 title="Share Screen directly via P2P"
               >

@@ -334,44 +334,79 @@ export class WebRTCManager {
     };
   }
 
-  public async startScreenShare(): Promise<MediaStream | null> {
+  public async startMediaShare(mode: 'screen' | 'camera' = 'screen'): Promise<MediaStream | null> {
     if (!this.peerConnection || !this.socket || !this.targetParticipantId) {
-      throw new Error('Peer connection not established');
-    }
-    if (!navigator.mediaDevices?.getDisplayMedia) {
-      throw new Error('Screen sharing is not supported in this browser/device');
+      throw new Error('Peer connection not established. Connect a second device first.');
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: 'always' } as any,
-        audio: false,
-      });
+    let stream: MediaStream | null = null;
 
-      this.localStream = stream;
-
-      stream.getVideoTracks().forEach((track) => {
-        this.peerConnection?.addTrack(track, stream);
-        track.onended = () => {
-          this.stopScreenShare();
-        };
-      });
-
-      // Renegotiate SDP with peer
-      const offer = await this.peerConnection.createOffer();
-      await this.peerConnection.setLocalDescription(offer);
-      this.socket.emit('webrtc:signal', {
-        toParticipantId: this.targetParticipantId,
-        signal: { type: 'offer', sdp: this.peerConnection.localDescription },
-      });
-
-      return stream;
-    } catch (err: any) {
-      if (err.name === 'NotAllowedError') {
-        return null; // User cancelled screen selection
+    if (mode === 'screen') {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: { cursor: 'always' } as any,
+            audio: false,
+          });
+        } catch (err: any) {
+          if (err.name === 'NotAllowedError') {
+            return null; // User cancelled prompt
+          }
+          // On mobile devices where getDisplayMedia fails, gracefully attempt camera
+          if (typeof navigator.mediaDevices?.getUserMedia === 'function') {
+            mode = 'camera';
+          } else {
+            throw err;
+          }
+        }
+      } else if (typeof navigator.mediaDevices?.getUserMedia === 'function') {
+        mode = 'camera';
+      } else {
+        throw new Error('Media capture is not supported in this browser.');
       }
-      throw err;
     }
+
+    if (mode === 'camera' && !stream) {
+      if (typeof navigator.mediaDevices?.getUserMedia !== 'function') {
+        throw new Error('Camera access is not supported in this browser.');
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+    }
+
+    if (!stream) return null;
+
+    this.localStream = stream;
+
+    stream.getVideoTracks().forEach((track) => {
+      this.peerConnection?.addTrack(track, stream!);
+      track.onended = () => {
+        this.stopScreenShare();
+      };
+    });
+
+    // Renegotiate SDP with peer
+    const offer = await this.peerConnection.createOffer();
+    await this.peerConnection.setLocalDescription(offer);
+    this.socket.emit('webrtc:signal', {
+      toParticipantId: this.targetParticipantId,
+      signal: { type: 'offer', sdp: this.peerConnection.localDescription },
+    });
+
+    return stream;
+  }
+
+  public async startScreenShare(mode: 'screen' | 'camera' = 'screen'): Promise<MediaStream | null> {
+    return this.startMediaShare(mode);
   }
 
   public async stopScreenShare() {

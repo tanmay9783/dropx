@@ -119,9 +119,9 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
     []
   );
 
-  const startScreenShare = useCallback(async () => {
+  const startScreenShare = useCallback(async (mode: 'screen' | 'camera' = 'screen') => {
     if (!managerRef.current) return null;
-    const stream = await managerRef.current.startScreenShare();
+    const stream = await managerRef.current.startScreenShare(mode);
     if (stream) {
       setIsSharingScreen(true);
       const track = stream.getVideoTracks()[0];
@@ -141,6 +141,7 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
   }, []);
 
   const supportsScreenShare = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia;
+  const supportsCameraShare = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
 
   return {
     p2pStatus,
@@ -153,6 +154,7 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
     startScreenShare,
     stopScreenShare,
     supportsScreenShare,
+    supportsCameraShare,
   };
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Monitor, Wifi, Play, StopCircle, Sparkles, Smartphone } from 'lucide-react';
+import { Monitor, Wifi, Play, StopCircle, Sparkles, Camera } from 'lucide-react';
 
 interface ScreenShareCardProps {
   isSharingScreen: boolean;
@@ -7,7 +7,8 @@ interface ScreenShareCardProps {
   participantCount: number;
   p2pStatus: string;
   supportsScreenShare: boolean;
-  onStartShare: () => void;
+  supportsCameraShare?: boolean;
+  onStartShare: (mode: 'screen' | 'camera') => void;
   onStopShare: () => void;
   onOpenViewer: () => void;
   peerDeviceName?: string;
@@ -18,7 +19,7 @@ export const ScreenShareCard: React.FC<ScreenShareCardProps> = ({
   hasRemoteStream,
   participantCount,
   p2pStatus,
-  supportsScreenShare,
+  supportsScreenShare: _supportsScreenShare,
   onStartShare,
   onStopShare,
   onOpenViewer,
@@ -77,7 +78,7 @@ export const ScreenShareCard: React.FC<ScreenShareCardProps> = ({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30">
           <div className="flex items-center space-x-2 text-xs text-rose-300">
             <Sparkles className="w-4 h-4 text-rose-400 flex-shrink-0 animate-bounce" />
-            <span>You are actively sharing your screen with connected room devices.</span>
+            <span>You are actively sharing your screen/camera with connected room devices.</span>
           </div>
           <button
             onClick={onStopShare}
@@ -101,29 +102,37 @@ export const ScreenShareCard: React.FC<ScreenShareCardProps> = ({
             <span>Open Live Viewer</span>
           </button>
         </div>
-      ) : supportsScreenShare ? (
+      ) : (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
           <p className="text-xs text-slate-400">
             {!hasMultipleDevices
-              ? 'Connect your phone or a 2nd device to enable real-time wireless screen mirroring.'
-              : 'Stream your entire display, application window, or browser tab to your phone or tablet.'}
+              ? 'Connect a 2nd device (phone or laptop) to share screen or live camera peer-to-peer.'
+              : 'Mirror your screen or stream your camera directly to connected devices with zero server lag.'}
           </p>
 
-          <button
-            onClick={onStartShare}
-            disabled={!hasMultipleDevices}
-            className="w-full sm:w-auto py-2 px-4 rounded-xl bg-yellow-400 hover:bg-yellow-300 disabled:opacity-40 disabled:hover:bg-yellow-400 text-black font-bold text-xs flex items-center justify-center space-x-1.5 transition-all active:scale-95 shadow-sm flex-shrink-0 cursor-pointer disabled:cursor-not-allowed"
-          >
-            <Monitor className="w-3.5 h-3.5" />
-            <span>Share Screen to Devices</span>
-          </button>
-        </div>
-      ) : (
-        <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 flex items-center space-x-2.5">
-          <Smartphone className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-          <span>
-            <strong>Screen Viewer Mode:</strong> Mobile browsers cannot broadcast their screen, but when your laptop or desktop starts sharing, the live display will stream right here automatically.
-          </span>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            {/* Share Screen Button (Android Chrome & Desktop) */}
+            <button
+              onClick={() => onStartShare('screen')}
+              disabled={!hasMultipleDevices}
+              className="flex-1 sm:flex-initial py-2 px-3.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 disabled:opacity-40 disabled:hover:bg-yellow-400 text-black font-bold text-xs flex items-center justify-center space-x-1.5 transition-all active:scale-95 shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              title="Share your display, app window, or mobile screen"
+            >
+              <Monitor className="w-3.5 h-3.5" />
+              <span>Share Screen</span>
+            </button>
+
+            {/* Share Camera Button (phones & laptops) */}
+            <button
+              onClick={() => onStartShare('camera')}
+              disabled={!hasMultipleDevices}
+              className="flex-1 sm:flex-initial py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/80 hover:border-yellow-500/40 text-slate-200 font-semibold text-xs flex items-center justify-center space-x-1.5 transition-all active:scale-95 shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Stream live camera directly from your phone or webcam"
+            >
+              <Camera className="w-3.5 h-3.5 text-yellow-400" />
+              <span>Share Camera</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -98,6 +98,8 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
   React.useEffect(() => {
     if (remoteStream) {
       setIsViewerOpen(true);
+    } else {
+      setIsViewerOpen(false);
     }
   }, [remoteStream]);
 

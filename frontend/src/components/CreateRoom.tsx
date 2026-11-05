@@ -120,6 +120,8 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
   React.useEffect(() => {
     if (remoteStream) {
       setIsViewerOpen(true);
+    } else {
+      setIsViewerOpen(false);
     }
   }, [remoteStream]);
 

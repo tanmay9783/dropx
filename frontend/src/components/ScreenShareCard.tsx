@@ -1,5 +1,5 @@
-import React from 'react';
-import { Monitor, Wifi, Play, StopCircle, Sparkles, Camera } from 'lucide-react';
+import React, { useState } from 'react';
+import { Monitor, Wifi, Play, StopCircle, Sparkles, Camera, AlertCircle, X } from 'lucide-react';
 
 interface ScreenShareCardProps {
   isSharingScreen: boolean;
@@ -8,7 +8,7 @@ interface ScreenShareCardProps {
   p2pStatus: string;
   supportsScreenShare: boolean;
   supportsCameraShare?: boolean;
-  onStartShare: (mode: 'screen' | 'camera') => void;
+  onStartShare: (mode: 'screen' | 'camera') => Promise<any> | void;
   onStopShare: () => void;
   onOpenViewer: () => void;
   peerDeviceName?: string;
@@ -27,6 +27,21 @@ export const ScreenShareCard: React.FC<ScreenShareCardProps> = ({
 }) => {
   const isP2PConnected = p2pStatus === 'CONNECTED';
   const hasMultipleDevices = participantCount > 1;
+
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [startingMode, setStartingMode] = useState<'screen' | 'camera' | null>(null);
+
+  const handleStart = async (mode: 'screen' | 'camera') => {
+    setShareError(null);
+    setStartingMode(mode);
+    try {
+      await onStartShare(mode);
+    } catch (err: any) {
+      setShareError(err?.message || 'Failed to start media share.');
+    } finally {
+      setStartingMode(null);
+    }
+  };
 
   return (
     <div className="w-full glass-panel-subtle rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800/80 my-4 text-left transition-all">
@@ -113,26 +128,42 @@ export const ScreenShareCard: React.FC<ScreenShareCardProps> = ({
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {/* Share Screen Button (Android Chrome & Desktop) */}
             <button
-              onClick={() => onStartShare('screen')}
-              disabled={!hasMultipleDevices}
+              onClick={() => handleStart('screen')}
+              disabled={!hasMultipleDevices || startingMode !== null}
               className="flex-1 sm:flex-initial py-2 px-3.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 disabled:opacity-40 disabled:hover:bg-yellow-400 text-black font-bold text-xs flex items-center justify-center space-x-1.5 transition-all active:scale-95 shadow-sm cursor-pointer disabled:cursor-not-allowed"
               title="Share your display, app window, or mobile screen"
             >
               <Monitor className="w-3.5 h-3.5" />
-              <span>Share Screen</span>
+              <span>{startingMode === 'screen' ? 'Starting...' : 'Share Screen'}</span>
             </button>
 
             {/* Share Camera Button (phones & laptops) */}
             <button
-              onClick={() => onStartShare('camera')}
-              disabled={!hasMultipleDevices}
+              onClick={() => handleStart('camera')}
+              disabled={!hasMultipleDevices || startingMode !== null}
               className="flex-1 sm:flex-initial py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/80 hover:border-yellow-500/40 text-slate-200 font-semibold text-xs flex items-center justify-center space-x-1.5 transition-all active:scale-95 shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               title="Stream live camera directly from your phone or webcam"
             >
               <Camera className="w-3.5 h-3.5 text-yellow-400" />
-              <span>Share Camera</span>
+              <span>{startingMode === 'camera' ? 'Opening...' : 'Share Camera'}</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {shareError && (
+        <div className="mt-3 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between animate-fade-in">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+            <span>{shareError}</span>
+          </div>
+          <button
+            onClick={() => setShareError(null)}
+            className="text-slate-400 hover:text-white p-0.5 ml-2 transition-colors"
+            title="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>

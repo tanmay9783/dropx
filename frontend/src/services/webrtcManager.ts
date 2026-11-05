@@ -90,14 +90,31 @@ export class WebRTCManager {
           this.updateStatus('CONNECTED');
         } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
           this.updateStatus('DISCONNECTED');
+          this.clearRemoteStream();
         }
       };
 
       // Inbound Media Stream for P2P Screen Sharing
       this.peerConnection.ontrack = (event) => {
         if (event.streams && event.streams[0]) {
-          this.remoteStream = event.streams[0];
+          const stream = event.streams[0];
+          this.remoteStream = stream;
           this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
+
+          // Listen for track ending or muting on receiver
+          event.track.onended = () => {
+            this.clearRemoteStream();
+          };
+          event.track.onmute = () => {
+            const activeTracks = stream.getVideoTracks().filter((t) => t.readyState === 'live' && !t.muted);
+            if (activeTracks.length === 0) {
+              this.clearRemoteStream();
+            }
+          };
+          event.track.onunmute = () => {
+            this.remoteStream = stream;
+            this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
+          };
         }
       };
 
@@ -136,8 +153,7 @@ export class WebRTCManager {
 
     try {
       if (signal.type === 'screenshare:stopped') {
-        this.remoteStream = null;
-        this.remoteStreamListeners.forEach((l) => l(null));
+        this.clearRemoteStream();
         return;
       }
 
@@ -155,6 +171,15 @@ export class WebRTCManager {
             toParticipantId: this.targetParticipantId,
             signal: { type: 'answer', sdp: this.peerConnection.localDescription },
           });
+        }
+
+        // Verify if peer stopped sending video in renegotiation
+        const receivers = this.peerConnection.getReceivers();
+        const hasLiveVideo = receivers.some(
+          (r) => r.track && r.track.kind === 'video' && r.track.readyState === 'live' && !r.track.muted
+        );
+        if (!hasLiveVideo && this.remoteStream) {
+          this.clearRemoteStream();
         }
       } else if (signal.type === 'answer') {
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
@@ -199,6 +224,10 @@ export class WebRTCManager {
     if (typeof data === 'string') {
       try {
         const msg = JSON.parse(data);
+        if (msg.type === 'screenshare:stopped') {
+          this.clearRemoteStream();
+          return;
+        }
         if (msg.type === 'file-start') {
           this.incomingMeta = {
             id: msg.id,
@@ -334,6 +363,18 @@ export class WebRTCManager {
     };
   }
 
+  public clearRemoteStream() {
+    if (this.remoteStream) {
+      this.remoteStream.getTracks().forEach((t) => {
+        try {
+          t.stop();
+        } catch {}
+      });
+      this.remoteStream = null;
+    }
+    this.remoteStreamListeners.forEach((l) => l(null));
+  }
+
   public async startMediaShare(mode: 'screen' | 'camera' = 'screen'): Promise<MediaStream | null> {
     if (!this.peerConnection || !this.socket || !this.targetParticipantId) {
       throw new Error('Peer connection not established. Connect a second device first.');
@@ -342,32 +383,29 @@ export class WebRTCManager {
     let stream: MediaStream | null = null;
 
     if (mode === 'screen') {
-      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
-        try {
-          stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { cursor: 'always' } as any,
-            audio: false,
-          });
-        } catch (err: any) {
-          if (err.name === 'NotAllowedError') {
-            return null; // User cancelled prompt
-          }
-          // On mobile devices where getDisplayMedia fails, gracefully attempt camera
-          if (typeof navigator.mediaDevices?.getUserMedia === 'function') {
-            mode = 'camera';
-          } else {
-            throw err;
-          }
-        }
-      } else if (typeof navigator.mediaDevices?.getUserMedia === 'function') {
-        mode = 'camera';
-      } else {
-        throw new Error('Media capture is not supported in this browser.');
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getDisplayMedia) {
+        throw new Error(
+          'Screen sharing is not supported by this mobile browser. Please use "Share Camera" to stream live video, or share screen from a desktop PC.'
+        );
       }
-    }
-
-    if (mode === 'camera' && !stream) {
-      if (typeof navigator.mediaDevices?.getUserMedia !== 'function') {
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false,
+        });
+      } catch (err: any) {
+        if (err.name === 'NotAllowedError') {
+          return null; // User cancelled prompt
+        }
+        if (err.name === 'NotSupportedError' || err.name === 'TypeError') {
+          throw new Error(
+            'Screen sharing is restricted by your device/browser. Please use "Share Camera" to stream live video instead.'
+          );
+        }
+        throw err;
+      }
+    } else if (mode === 'camera') {
+      if (typeof navigator === 'undefined' || typeof navigator.mediaDevices?.getUserMedia !== 'function') {
         throw new Error('Camera access is not supported in this browser.');
       }
       try {
@@ -411,8 +449,27 @@ export class WebRTCManager {
 
   public async stopScreenShare() {
     if (this.localStream) {
-      this.localStream.getTracks().forEach((t) => t.stop());
+      this.localStream.getTracks().forEach((t) => {
+        try {
+          t.stop();
+        } catch {}
+      });
       this.localStream = null;
+    }
+
+    // 1. Send immediate stop notification over DataChannel (zero-latency LAN)
+    if (this.dataChannel && this.dataChannel.readyState === 'open') {
+      try {
+        this.dataChannel.send(JSON.stringify({ type: 'screenshare:stopped' }));
+      } catch {}
+    }
+
+    // 2. Send stop notification over signaling socket
+    if (this.socket && this.targetParticipantId) {
+      this.socket.emit('webrtc:signal', {
+        toParticipantId: this.targetParticipantId,
+        signal: { type: 'screenshare:stopped' },
+      });
     }
 
     if (this.peerConnection) {
@@ -421,28 +478,21 @@ export class WebRTCManager {
         if (sender.track && sender.track.kind === 'video') {
           try {
             this.peerConnection?.removeTrack(sender);
-          } catch {
-            // Ignore
-          }
+          } catch {}
         }
       });
 
-      if (this.socket && this.targetParticipantId) {
-        this.socket.emit('webrtc:signal', {
-          toParticipantId: this.targetParticipantId,
-          signal: { type: 'screenshare:stopped' },
-        });
-
-        try {
-          const offer = await this.peerConnection.createOffer();
-          await this.peerConnection.setLocalDescription(offer);
+      try {
+        const offer = await this.peerConnection.createOffer();
+        await this.peerConnection.setLocalDescription(offer);
+        if (this.socket && this.targetParticipantId) {
           this.socket.emit('webrtc:signal', {
             toParticipantId: this.targetParticipantId,
             signal: { type: 'offer', sdp: this.peerConnection.localDescription },
           });
-        } catch {
-          // Ignore renegotiation failure on stop
         }
+      } catch {
+        // Ignore renegotiation failure on stop
       }
     }
   }
@@ -453,8 +503,7 @@ export class WebRTCManager {
       this.localStream.getTracks().forEach((t) => t.stop());
       this.localStream = null;
     }
-    this.remoteStream = null;
-    this.remoteStreamListeners.forEach((l) => l(null));
+    this.clearRemoteStream();
 
     if (this.dataChannel) {
       this.dataChannel.close();

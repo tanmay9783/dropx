@@ -27,11 +27,37 @@ export const ScreenShareModal: React.FC<ScreenShareModalProps> = ({
   const [snapshotSuccess, setSnapshotSuccess] = useState(false);
 
   useEffect(() => {
-    if (videoRef.current && stream) {
+    if (!stream) {
+      onClose();
+      return;
+    }
+
+    if (videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.play().catch(() => {});
     }
-  }, [stream]);
+
+    // Auto-close modal when stream tracks end or are muted by the remote sharer
+    const tracks = stream.getVideoTracks();
+    const handleEndedOrMuted = () => {
+      const liveTracks = tracks.filter((t) => t.readyState === 'live' && !t.muted);
+      if (liveTracks.length === 0) {
+        onClose();
+      }
+    };
+
+    tracks.forEach((t) => {
+      t.addEventListener('ended', handleEndedOrMuted);
+      t.addEventListener('mute', handleEndedOrMuted);
+    });
+
+    return () => {
+      tracks.forEach((t) => {
+        t.removeEventListener('ended', handleEndedOrMuted);
+        t.removeEventListener('mute', handleEndedOrMuted);
+      });
+    };
+  }, [stream, onClose]);
 
   const toggleFullscreen = async () => {
     try {

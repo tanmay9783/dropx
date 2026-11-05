@@ -96,26 +96,14 @@ export class WebRTCManager {
 
       // Inbound Media Stream for P2P Screen Sharing
       this.peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-          const stream = event.streams[0];
-          this.remoteStream = stream;
-          this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
+        const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+        this.remoteStream = stream;
+        this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
 
-          // Listen for track ending or muting on receiver
-          event.track.onended = () => {
-            this.clearRemoteStream();
-          };
-          event.track.onmute = () => {
-            const activeTracks = stream.getVideoTracks().filter((t) => t.readyState === 'live' && !t.muted);
-            if (activeTracks.length === 0) {
-              this.clearRemoteStream();
-            }
-          };
-          event.track.onunmute = () => {
-            this.remoteStream = stream;
-            this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
-          };
-        }
+        // Listen for track ending on receiver
+        event.track.onended = () => {
+          this.clearRemoteStream();
+        };
       };
 
       if (this.isInitiator) {
@@ -158,6 +146,11 @@ export class WebRTCManager {
       }
 
       if (signal.type === 'offer') {
+        if (this.peerConnection.signalingState !== 'stable') {
+          try {
+            await this.peerConnection.setLocalDescription({ type: 'rollback' } as any);
+          } catch {}
+        }
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
         while (this.pendingCandidates.length > 0) {
           const cand = this.pendingCandidates.shift();
@@ -172,23 +165,16 @@ export class WebRTCManager {
             signal: { type: 'answer', sdp: this.peerConnection.localDescription },
           });
         }
-
-        // Verify if peer stopped sending video in renegotiation
-        const receivers = this.peerConnection.getReceivers();
-        const hasLiveVideo = receivers.some(
-          (r) => r.track && r.track.kind === 'video' && r.track.readyState === 'live' && !r.track.muted
-        );
-        if (!hasLiveVideo && this.remoteStream) {
-          this.clearRemoteStream();
-        }
       } else if (signal.type === 'answer') {
-        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-        while (this.pendingCandidates.length > 0) {
-          const cand = this.pendingCandidates.shift();
-          if (cand) await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+        if (this.peerConnection.signalingState === 'have-local-offer') {
+          await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+          while (this.pendingCandidates.length > 0) {
+            const cand = this.pendingCandidates.shift();
+            if (cand) await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+          }
         }
       } else if (signal.type === 'candidate' && signal.candidate) {
-        if (!this.peerConnection.remoteDescription) {
+        if (!this.peerConnection.remoteDescription || !this.peerConnection.remoteDescription.type) {
           this.pendingCandidates.push(signal.candidate);
         } else {
           await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate)).catch(() => {});
@@ -425,12 +411,22 @@ export class WebRTCManager {
 
     this.localStream = stream;
 
-    stream.getVideoTracks().forEach((track) => {
-      this.peerConnection?.addTrack(track, stream!);
-      track.onended = () => {
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.onended = () => {
         this.stopScreenShare();
       };
-    });
+
+      const senders = this.peerConnection.getSenders();
+      const existingSender = senders.find(
+        (s) => s.track?.kind === 'video' || (s as any).kind === 'video'
+      );
+      if (existingSender) {
+        await existingSender.replaceTrack(videoTrack);
+      } else {
+        this.peerConnection.addTrack(videoTrack, stream);
+      }
+    }
 
     // Renegotiate SDP with peer
     const offer = await this.peerConnection.createOffer();
@@ -474,13 +470,16 @@ export class WebRTCManager {
 
     if (this.peerConnection) {
       const senders = this.peerConnection.getSenders();
-      senders.forEach((sender) => {
+      for (const sender of senders) {
         if (sender.track && sender.track.kind === 'video') {
+          try {
+            await sender.replaceTrack(null);
+          } catch {}
           try {
             this.peerConnection?.removeTrack(sender);
           } catch {}
         }
-      });
+      }
 
       try {
         const offer = await this.peerConnection.createOffer();

@@ -37,24 +37,22 @@ export const ScreenShareModal: React.FC<ScreenShareModalProps> = ({
       videoRef.current.play().catch(() => {});
     }
 
-    // Auto-close modal when stream tracks end or are muted by the remote sharer
+    // Auto-close modal when stream tracks end
     const tracks = stream.getVideoTracks();
-    const handleEndedOrMuted = () => {
-      const liveTracks = tracks.filter((t) => t.readyState === 'live' && !t.muted);
+    const handleEnded = () => {
+      const liveTracks = tracks.filter((t) => t.readyState === 'live');
       if (liveTracks.length === 0) {
         onClose();
       }
     };
 
     tracks.forEach((t) => {
-      t.addEventListener('ended', handleEndedOrMuted);
-      t.addEventListener('mute', handleEndedOrMuted);
+      t.addEventListener('ended', handleEnded);
     });
 
     return () => {
       tracks.forEach((t) => {
-        t.removeEventListener('ended', handleEndedOrMuted);
-        t.removeEventListener('mute', handleEndedOrMuted);
+        t.removeEventListener('ended', handleEnded);
       });
     };
   }, [stream, onClose]);
@@ -192,6 +190,7 @@ export const ScreenShareModal: React.FC<ScreenShareModalProps> = ({
             ref={videoRef}
             autoPlay
             playsInline
+            muted
             className="w-full h-full max-h-[75vh] object-contain"
           />
 

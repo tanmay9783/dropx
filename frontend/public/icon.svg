@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="128" fill="#090d16"/>
+  <rect x="24" y="24" width="464" height="464" rx="104" stroke="#06b6d4" stroke-width="8" stroke-opacity="0.3"/>
+  <g transform="translate(96, 96)">
+    <!-- QR Corner Top-Left -->
+    <rect x="0" y="0" width="100" height="100" rx="20" stroke="#06b6d4" stroke-width="18"/>
+    <rect x="28" y="28" width="44" height="44" rx="10" fill="#facc15"/>
+    <!-- QR Corner Top-Right -->
+    <rect x="220" y="0" width="100" height="100" rx="20" stroke="#06b6d4" stroke-width="18"/>
+    <rect x="248" y="28" width="44" height="44" rx="10" fill="#facc15"/>
+    <!-- QR Corner Bottom-Left -->
+    <rect x="0" y="220" width="100" height="100" rx="20" stroke="#06b6d4" stroke-width="18"/>
+    <rect x="28" y="248" width="44" height="44" rx="10" fill="#facc15"/>
+    <!-- Central Transfer Bolt / Signal Matrix -->
+    <circle cx="160" cy="160" r="22" fill="#06b6d4"/>
+    <rect x="220" y="140" width="40" height="40" rx="8" fill="#06b6d4"/>
+    <rect x="140" y="220" width="40" height="40" rx="8" fill="#06b6d4"/>
+    <path d="M 220 220 L 320 320 M 320 220 L 220 320" stroke="#facc15" stroke-width="18" stroke-linecap="round"/>
+  </g>
+</svg>
+

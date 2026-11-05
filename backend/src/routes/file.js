@@ -7,10 +7,10 @@ import { env } from '../config/env.js';
 
 const router = Router();
 
-// Upload URL Request Rate Limiter
+// Upload URL Request Rate Limiter (allows bulk uploads / folder transfers)
 const uploadUrlLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: process.env.NODE_ENV === 'test' ? 5000 : 50,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 300,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many upload URL requests, please try again later.' } },
@@ -19,16 +19,16 @@ const uploadUrlLimiter = createLimiter({
 // Complete Upload Rate Limiter
 const completeUploadLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: process.env.NODE_ENV === 'test' ? 5000 : 50,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 300,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many completion requests, please try again later.' } },
 });
 
-// Presigned Download URL Request Rate Limiter
+// Presigned Download URL Request Rate Limiter (allows previewing and batch downloads)
 const downloadUrlLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: process.env.NODE_ENV === 'test' ? 5000 : 100,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 600,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many download URL requests, please try again later.' } },

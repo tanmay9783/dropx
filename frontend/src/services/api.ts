@@ -1,4 +1,18 @@
+import { getDeviceName } from '../utils/device';
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+export function parseApiError(data: any, fallbackMessage: string, status?: number): string {
+  if (status === 429) {
+    return 'Too many requests. Please wait a moment and try again.';
+  }
+  if (!data) return fallbackMessage;
+  if (typeof data === 'string') return data;
+  if (typeof data.error === 'string') return data.error;
+  if (data.error && typeof data.error.message === 'string') return data.error.message;
+  if (typeof data.message === 'string') return data.message;
+  return fallbackMessage;
+}
 
 export interface HealthResponse {
   status: string;
@@ -76,7 +90,7 @@ export async function createRoom(): Promise<CreateRoomResponse> {
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to create room');
+    throw new Error(parseApiError(data, 'Failed to create room', response.status));
   }
   return data;
 }
@@ -87,7 +101,7 @@ export async function getPresence(roomCode: string, socketToken: string): Promis
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to fetch room presence');
+    throw new Error(parseApiError(data, 'Failed to fetch room presence', response.status));
   }
   return data;
 }
@@ -96,7 +110,7 @@ export async function getRoom(roomCode: string): Promise<GetRoomResponse> {
   const response = await fetch(`${API_BASE}/api/rooms/${roomCode}`);
   const data = await response.json();
   if (!response.ok) {
-    const error = new Error(data.error?.message || 'Failed to fetch room') as any;
+    const error = new Error(parseApiError(data, 'Failed to fetch room', response.status)) as any;
     error.code = data.error?.code;
     error.status = response.status;
     throw error;
@@ -111,7 +125,7 @@ export async function joinRoom(roomCode: string): Promise<JoinRoomResponse> {
   });
   const data = await response.json();
   if (!response.ok) {
-    const error = new Error(data.error?.message || 'Failed to join room') as any;
+    const error = new Error(parseApiError(data, 'Failed to join room', response.status)) as any;
     error.code = data.error?.code;
     error.status = response.status;
     throw error;
@@ -129,7 +143,7 @@ export async function destroyRoom(roomCode: string, ownerToken: string): Promise
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to destroy room');
+    throw new Error(parseApiError(data, 'Failed to destroy room', response.status));
   }
   return data;
 }
@@ -155,11 +169,11 @@ export async function requestUploadUrl(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${socketToken}`,
     },
-    body: JSON.stringify({ fileName, contentType, sizeBytes, deviceName }),
+    body: JSON.stringify({ fileName, contentType, sizeBytes, deviceName: deviceName || getDeviceName() }),
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to request upload URL');
+    throw new Error(parseApiError(data, 'Failed to request upload URL', response.status));
   }
   return data;
 }
@@ -215,7 +229,7 @@ export async function completeUpload(
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to finalize upload');
+    throw new Error(parseApiError(data, 'Failed to finalize upload', response.status));
   }
   return data;
 }
@@ -230,7 +244,7 @@ export async function getChunkStatus(
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to fetch chunk status');
+    throw new Error(parseApiError(data, 'Failed to fetch chunk status', response.status));
   }
   return data;
 }
@@ -250,7 +264,7 @@ export async function uploadChunk(
     body: chunkBlob,
   });
   if (!response.ok) {
-    throw new Error(`Failed to upload chunk ${chunkIndex} (status: ${response.status})`);
+    throw new Error(`Failed to upload chunk ${chunkIndex} (${response.status === 429 ? 'Rate limited' : `status: ${response.status}`})`);
   }
 }
 
@@ -270,7 +284,7 @@ export async function completeChunkedUpload(
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to assemble chunked upload');
+    throw new Error(parseApiError(data, 'Failed to assemble chunked upload', response.status));
   }
   return data;
 }
@@ -297,12 +311,12 @@ export async function uploadFile(
       fileName: name,
       contentType: file.type || 'application/octet-stream',
       sizeBytes: size,
-      deviceName: (await import('./../utils/device')).getDeviceName(),
+      deviceName: getDeviceName(),
     }),
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to request upload URL');
+    throw new Error(parseApiError(data, 'Failed to request upload URL', response.status));
   }
 
   const CHUNK_THRESHOLD = 4 * 1024 * 1024; // 4MB threshold for chunked upload
@@ -361,7 +375,7 @@ export async function getFiles(roomCode: string, socketToken: string): Promise<{
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to fetch room files');
+    throw new Error(parseApiError(data, 'Failed to fetch room files', response.status));
   }
   return data;
 }
@@ -375,7 +389,7 @@ export async function deleteFile(roomCode: string, fileId: string, socketToken: 
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to delete file');
+    throw new Error(parseApiError(data, 'Failed to delete file', response.status));
   }
   return data;
 }
@@ -392,7 +406,7 @@ export async function requestDownloadUrl(
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to generate download URL');
+    throw new Error(parseApiError(data, 'Failed to generate download URL', response.status));
   }
   return data;
 }
@@ -412,7 +426,7 @@ export async function getSnippets(roomCode: string, socketToken: string): Promis
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to fetch room snippets');
+    throw new Error(parseApiError(data, 'Failed to fetch room snippets', response.status));
   }
   return data;
 }
@@ -428,7 +442,7 @@ export async function createSnippet(roomCode: string, socketToken: string, conte
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to share snippet');
+    throw new Error(parseApiError(data, 'Failed to share snippet', response.status));
   }
   return data;
 }
@@ -442,7 +456,7 @@ export async function deleteSnippet(roomCode: string, snippetId: string, socketT
   });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Failed to delete snippet');
+    throw new Error(parseApiError(data, 'Failed to delete snippet', response.status));
   }
   return data;
 }

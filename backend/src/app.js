@@ -12,8 +12,8 @@ import { createLimiter } from './middleware/rateLimiterStore.js';
 
 const app = express();
 
-// Express proxy trust configuration for ALB + Nginx deployment
-app.set('trust proxy', env.TRUST_PROXY_HOPS);
+// Express proxy trust configuration for ALB + Nginx + Render deployment
+app.set('trust proxy', env.TRUST_PROXY_HOPS || 1);
 
 // Security HTTP headers
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
@@ -35,10 +35,16 @@ app.use(
 // Global rate limiting with Redis store support
 const limiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 200,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 2500,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later.' },
+  skip: (req) => {
+    // Skip rate-limiting for health checks, readiness probes, and socket handshakes
+    if (req.path === '/api/health' || req.path === '/api/ready') return true;
+    if (req.path.startsWith('/socket.io')) return true;
+    return false;
+  },
+  message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests, please try again later.' } },
 });
 app.use(limiter);
 
@@ -66,11 +72,33 @@ app.use('/api', fileRoutes);
 import path from 'node:path';
 import fs from 'node:fs';
 
-const frontendDist = path.resolve(process.cwd(), '../frontend/dist');
-if (fs.existsSync(frontendDist)) {
-  app.use(express.static(frontendDist));
+const possibleDistPaths = [
+  path.resolve(process.cwd(), '../frontend/dist'),
+  path.resolve(process.cwd(), 'frontend/dist'),
+  path.resolve(process.cwd(), 'dist'),
+];
+const frontendDist = possibleDistPaths.find((p) => fs.existsSync(p));
+
+if (frontendDist) {
+  app.use(
+    express.static(frontendDist, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        } else if (filePath.includes('/assets/')) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      },
+    })
+  );
+
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
+    // Do not return HTML for missing static assets (prevents Strict MIME type error)
+    if (path.extname(req.path)) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }

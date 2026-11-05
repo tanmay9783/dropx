@@ -4,7 +4,7 @@
   "description": "Instant cross-device file sharing using QR codes and zero-knowledge encryption.",
   "icons": [
     {
-      "src": "https://api.iconify.design/lucide:qr-code.svg?color=%2306b6d4",
+      "src": "/icon.svg",
       "type": "image/svg+xml",
       "sizes": "192x192 512x512"
     }

@@ -84,7 +84,8 @@ export function useRoomSocket({
 
   useEffect(() => {
     fetchPresenceSync();
-    const interval = setInterval(fetchPresenceSync, 4000);
+    // 25-second fallback presence sync (socket events keep presence updated instantly)
+    const interval = setInterval(fetchPresenceSync, 25000);
     const handleFocus = () => fetchPresenceSync();
     window.addEventListener('focus', handleFocus);
     return () => {
@@ -105,14 +106,16 @@ export function useRoomSocket({
 
     const socket = io(socketUrl, {
       path: '/socket.io',
+      transports: ['polling', 'websocket'],
       auth: {
         token: socketToken,
         roomCode,
         deviceName: getDeviceName(),
       },
       withCredentials: false,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 15,
+      reconnectionDelay: 1500,
+      timeout: 10000,
     });
 
     socketRef.current = socket;
@@ -122,12 +125,20 @@ export function useRoomSocket({
       fetchPresenceSync();
     });
 
-    socket.on('disconnect', () => {
-      setStatus('DISCONNECTED');
+    socket.on('disconnect', (reason) => {
+      if (reason === 'io client disconnect') {
+        setStatus('DISCONNECTED');
+      } else {
+        // Temporary network drop: mark as connecting while it auto-reconnects
+        setStatus('CONNECTING');
+      }
     });
 
     socket.on('connect_error', (err) => {
-      console.warn('Socket.IO connection error:', err.message);
+      console.warn('Socket.IO connection notice:', err.message);
+    });
+
+    socket.io.on('reconnect_failed', () => {
       setStatus('DISCONNECTED');
     });
 

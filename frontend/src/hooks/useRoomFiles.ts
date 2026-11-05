@@ -46,10 +46,10 @@ export function useRoomFiles({ roomCode, socketToken, roomKey }: UseRoomFilesOpt
   useEffect(() => {
     loadFiles();
 
-    // 5-second background sync for files
+    // 30-second fallback sync for files (real-time socket handles instantaneous events)
     const interval = setInterval(() => {
       loadFiles(true);
-    }, 5000);
+    }, 30000);
 
     const handleFocus = () => {
       loadFiles(true);

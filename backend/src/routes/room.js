@@ -5,19 +5,19 @@ import { createLimiter } from '../middleware/rateLimiterStore.js';
 
 const router = Router();
 
-// Stricter rate limiting for room creation (max 20 rooms per 15 minutes per IP)
+// Rate limiting for room creation
 const roomCreationLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: 20,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 100,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many room creation requests, please try again later.' } },
 });
 
-// Stricter rate limiting for room joining (max 30 join attempts per 15 minutes per IP)
+// Rate limiting for room joining
 const roomJoinLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: 30,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 150,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many room join attempts, please try again later.' } },

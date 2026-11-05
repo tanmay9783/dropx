@@ -34,10 +34,10 @@ export const TextSnippets: React.FC<TextSnippetsProps> = ({ roomCode, socketToke
   useEffect(() => {
     fetchRoomSnippets();
 
-    // 4-second fallback polling interval for guaranteed auto-sync across instances
+    // 30-second fallback polling interval (real-time socket events handle instantaneous updates)
     const interval = setInterval(() => {
       fetchRoomSnippets(true);
-    }, 4000);
+    }, 30000);
 
     const handleFocus = () => {
       fetchRoomSnippets(true);

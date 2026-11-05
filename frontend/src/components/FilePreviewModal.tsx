@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   X, 
   Download, 
@@ -38,6 +38,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+  const [retryKey, setRetryKey] = useState<number>(0);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const ext = file.originalName.split('.').pop()?.toLowerCase() || '';
   const mime = (file.mimeType || '').toLowerCase();
@@ -57,6 +60,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   useEffect(() => {
     let active = true;
     let createdUrl: string | null = null;
+    const abortController = new AbortController();
 
     const loadContent = async () => {
       setLoading(true);
@@ -65,8 +69,13 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
         const { downloadUrl } = await requestDownloadUrl(roomCode, file.id, socketToken);
         const finalUrl = downloadUrl.startsWith('/') ? `${import.meta.env.VITE_API_URL || ''}${downloadUrl}` : downloadUrl;
 
-        const res = await fetch(finalUrl);
-        if (!res.ok) throw new Error(`Failed to fetch file content (${res.status})`);
+        const res = await fetch(finalUrl, { signal: abortController.signal });
+        if (!res.ok) {
+          if (res.status === 429) {
+            throw new Error('Too many requests. Please wait a moment and try again.');
+          }
+          throw new Error(`Failed to load file preview (${res.status})`);
+        }
 
         let blob = await res.blob();
         if (roomKey) {
@@ -82,6 +91,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
           setObjectUrl(createdUrl);
         }
       } catch (err: any) {
+        if (err.name === 'AbortError') return;
         if (active) {
           setError(err.message || 'Unable to preview this file.');
         }
@@ -95,18 +105,19 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     loadContent();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && onCloseRef.current) onCloseRef.current();
     };
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       active = false;
+      abortController.abort();
       window.removeEventListener('keydown', handleKeyDown);
       if (createdUrl) {
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [file.id, roomCode, socketToken, roomKey, isText, file.mimeType, onClose]);
+  }, [file.id, roomCode, socketToken, roomKey, isText, file.mimeType, retryKey]);
 
   const handleCopyText = async () => {
     if (!textContent) return;
@@ -190,12 +201,20 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             <div className="p-6 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex flex-col items-center space-y-3 max-w-md text-center">
               <AlertCircle className="w-8 h-8 text-rose-500" />
               <p className="font-semibold">{error}</p>
-              <button
-                onClick={() => onDownload(file.id)}
-                className="py-2 px-4 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-xs font-bold"
-              >
-                Download Raw File Instead
-              </button>
+              <div className="flex items-center space-x-2 pt-1">
+                <button
+                  onClick={() => setRetryKey((k) => k + 1)}
+                  className="py-2 px-4 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-bold transition-all"
+                >
+                  Retry Preview
+                </button>
+                <button
+                  onClick={() => onDownload(file.id)}
+                  className="py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700"
+                >
+                  Download File
+                </button>
+              </div>
             </div>
           ) : isImage && objectUrl ? (
             <div className="w-full flex items-center justify-center p-2">

@@ -80,6 +80,10 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [previewingFile, setPreviewingFile] = useState<SharedFile | null>(null);
 
+  const handleClosePreview = useCallback(() => {
+    setPreviewingFile(null);
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       processFiles(e.target.files);
@@ -476,7 +480,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
           roomCode={roomCode}
           socketToken={socketToken}
           roomKey={roomKey}
-          onClose={() => setPreviewingFile(null)}
+          onClose={handleClosePreview}
           onDownload={(id) => {
             if (onDownload) onDownload(id);
           }}

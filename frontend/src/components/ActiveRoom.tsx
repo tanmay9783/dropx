@@ -65,8 +65,6 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     roomKey,
   });
 
-  const [webRTCSignalHandler, setWebRTCSignalHandler] = React.useState<((signal: any) => void) | null>(null);
-
   // Real-Time Socket Presence & File Events
   const { status: socketStatus, participantCount, participants, notifications, socket } = useRoomSocket({
     roomCode: room.roomCode,
@@ -76,22 +74,13 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     onFileDeleted: removeFileFromSocket,
     onSnippetCreated: setNewSnippet,
     onSnippetDeleted: setDeletedSnippetId,
-    onWebRTCSignal: (data) => {
-      if (webRTCSignalHandler) {
-        webRTCSignalHandler(data.signal);
-      }
-    },
   });
 
-  const { p2pStatus, handleSignal } = useWebRTC({
+  const { p2pStatus } = useWebRTC({
     socket,
     currentParticipantId: participantId,
     participants,
   });
-
-  React.useEffect(() => {
-    setWebRTCSignalHandler(() => handleSignal);
-  }, [handleSignal]);
 
   return (
     <div className="max-w-2xl mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl transition-colors duration-300">

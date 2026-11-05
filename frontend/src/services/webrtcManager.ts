@@ -44,6 +44,7 @@ export class WebRTCManager {
   private incomingMeta: { id: string; name: string; size: number; mimeType: string } | null = null;
   private incomingChunks: ArrayBuffer[] = [];
   private incomingBytes = 0;
+  private pendingCandidates: RTCIceCandidateInit[] = [];
 
   constructor(currentParticipantId: string, isInitiator = false) {
     this.currentParticipantId = currentParticipantId;
@@ -125,6 +126,10 @@ export class WebRTCManager {
     try {
       if (signal.type === 'offer') {
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        while (this.pendingCandidates.length > 0) {
+          const cand = this.pendingCandidates.shift();
+          if (cand) await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+        }
         const answer = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answer);
 
@@ -136,8 +141,16 @@ export class WebRTCManager {
         }
       } else if (signal.type === 'answer') {
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        while (this.pendingCandidates.length > 0) {
+          const cand = this.pendingCandidates.shift();
+          if (cand) await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+        }
       } else if (signal.type === 'candidate' && signal.candidate) {
-        await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        if (!this.peerConnection.remoteDescription) {
+          this.pendingCandidates.push(signal.candidate);
+        } else {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate)).catch(() => {});
+        }
       }
     } catch {
       // Ignore signaling errors gracefully
@@ -297,6 +310,7 @@ export class WebRTCManager {
   }
 
   public destroy() {
+    this.pendingCandidates = [];
     if (this.dataChannel) {
       this.dataChannel.close();
       this.dataChannel = null;

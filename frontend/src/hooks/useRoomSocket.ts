@@ -46,6 +46,25 @@ export function useRoomSocket({
 
   const socketRef = useRef<Socket | null>(null);
 
+  // Store callbacks in ref so changing them NEVER forces socket reconnects
+  const callbacksRef = useRef({
+    onRoomExpired,
+    onFileUploaded,
+    onFileDeleted,
+    onSnippetCreated,
+    onSnippetDeleted,
+    onWebRTCSignal,
+  });
+
+  callbacksRef.current = {
+    onRoomExpired,
+    onFileUploaded,
+    onFileDeleted,
+    onSnippetCreated,
+    onSnippetDeleted,
+    onWebRTCSignal,
+  };
+
   const currentParticipantId = (() => {
     try {
       if (!socketToken) return '';
@@ -66,7 +85,7 @@ export function useRoomSocket({
     setNotifications((prev) => [newNotif, ...prev.slice(0, 4)]);
   }, []);
 
-  // Periodic Presence Sync
+  // Presence sync triggered on initial connect or tab focus
   const fetchPresenceSync = useCallback(async () => {
     if (!roomCode || !socketToken) return;
     try {
@@ -83,13 +102,9 @@ export function useRoomSocket({
   }, [roomCode, socketToken]);
 
   useEffect(() => {
-    fetchPresenceSync();
-    // 25-second fallback presence sync (socket events keep presence updated instantly)
-    const interval = setInterval(fetchPresenceSync, 25000);
     const handleFocus = () => fetchPresenceSync();
     window.addEventListener('focus', handleFocus);
     return () => {
-      clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
   }, [fetchPresenceSync]);
@@ -97,6 +112,10 @@ export function useRoomSocket({
   useEffect(() => {
     if (!roomCode || !socketToken) {
       setStatus('DISCONNECTED');
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
       return;
     }
 
@@ -106,15 +125,17 @@ export function useRoomSocket({
 
     const socket = io(socketUrl, {
       path: '/socket.io',
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'], // Native WebSocket first to eliminate polling flood
       auth: {
         token: socketToken,
         roomCode,
         deviceName: getDeviceName(),
       },
       withCredentials: false,
-      reconnectionAttempts: 15,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1500,
+      reconnectionDelayMax: 5000,
       timeout: 10000,
     });
 
@@ -136,6 +157,7 @@ export function useRoomSocket({
 
     socket.on('connect_error', (err) => {
       console.warn('Socket.IO connection notice:', err.message);
+      setStatus('CONNECTING');
     });
 
     socket.io.on('reconnect_failed', () => {
@@ -166,61 +188,37 @@ export function useRoomSocket({
 
     socket.on('file-uploaded', (fileData: SharedFile) => {
       addNotification(`New file available: ${fileData.originalName}`, 'success');
-      if (onFileUploaded) {
-        onFileUploaded(fileData);
-      }
+      callbacksRef.current.onFileUploaded?.(fileData);
     });
 
     socket.on('file-deleted', (data: { fileId: string }) => {
       addNotification('A shared file was deleted', 'info');
-      if (onFileDeleted) {
-        onFileDeleted(data.fileId);
-      }
+      callbacksRef.current.onFileDeleted?.(data.fileId);
     });
 
     socket.on('snippet:created', (snippet: any) => {
       addNotification('New text snippet shared', 'info');
-      if (onSnippetCreated) {
-        onSnippetCreated(snippet);
-      }
+      callbacksRef.current.onSnippetCreated?.(snippet);
     });
 
     socket.on('snippet:deleted', (data: { id: string }) => {
-      if (onSnippetDeleted) {
-        onSnippetDeleted(data.id);
-      }
+      callbacksRef.current.onSnippetDeleted?.(data.id);
     });
 
     socket.on('webrtc:signal', (data: { fromParticipantId: string; toParticipantId?: string; signal: any }) => {
-      if (onWebRTCSignal) {
-        onWebRTCSignal(data);
-      }
+      callbacksRef.current.onWebRTCSignal?.(data);
     });
 
     socket.on('room-expired', () => {
       addNotification('This sharing room has expired', 'warn');
-      if (onRoomExpired) {
-        onRoomExpired();
-      }
+      callbacksRef.current.onRoomExpired?.();
     });
 
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('connect_error');
-      socket.off('room-state');
-      socket.off('user-joined');
-      socket.off('user-left');
-      socket.off('file-uploaded');
-      socket.off('file-deleted');
-      socket.off('snippet:created');
-      socket.off('snippet:deleted');
-      socket.off('webrtc:signal');
-      socket.off('room-expired');
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [roomCode, socketToken, onRoomExpired, onFileUploaded, onFileDeleted, onSnippetCreated, onSnippetDeleted, onWebRTCSignal, addNotification, fetchPresenceSync]);
+  }, [roomCode, socketToken]);
 
   return {
     status,

@@ -13,24 +13,52 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
   const [p2pStatus, setP2PStatus] = useState<P2PConnectionStatus>('DISCONNECTED');
   const [transferProgress, setTransferProgress] = useState<WebRTCFileTransferProgress | null>(null);
   const managerRef = useRef<WebRTCManager | null>(null);
+  const activePeerIdRef = useRef<string | null>(null);
 
   // Identify target peer (the other participant in the room)
   const otherParticipant = participants.find(
     (p) => p.id && currentParticipantId && p.id !== currentParticipantId
   );
+  const otherParticipantId = otherParticipant?.id;
+
+  // Listen directly to WebRTC signaling from the socket
+  useEffect(() => {
+    if (!socket) return;
+
+    const onWebRTCSignal = (data: { fromParticipantId: string; toParticipantId?: string; signal: any }) => {
+      if (!data || !data.signal) return;
+      if (data.toParticipantId && currentParticipantId && data.toParticipantId !== currentParticipantId) {
+        return; // Signal for another peer
+      }
+      managerRef.current?.handleSignal(data.signal);
+    };
+
+    socket.on('webrtc:signal', onWebRTCSignal);
+    return () => {
+      socket.off('webrtc:signal', onWebRTCSignal);
+    };
+  }, [socket, currentParticipantId]);
 
   useEffect(() => {
-    if (!socket || !currentParticipantId || !otherParticipant) {
+    if (!socket || !currentParticipantId || !otherParticipantId) {
       if (managerRef.current) {
         managerRef.current.destroy();
         managerRef.current = null;
+        activePeerIdRef.current = null;
       }
       setP2PStatus('DISCONNECTED');
       return;
     }
 
+    // Avoid recreation if already bound to this peer
+    if (activePeerIdRef.current === otherParticipantId && managerRef.current) {
+      return;
+    }
+
+    activePeerIdRef.current = otherParticipantId;
+
     // Deterministic initiator: the participant with lexicographically smaller ID initiates
-    const isInitiator = currentParticipantId < otherParticipant.id;
+    const isInitiator = currentParticipantId < otherParticipantId;
 
     const manager = new WebRTCManager(currentParticipantId, isInitiator);
     managerRef.current = manager;
@@ -59,15 +87,16 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
     });
 
     // Initialize WebRTC with socket and peer ID
-    manager.init(socket, otherParticipant.id);
+    manager.init(socket, otherParticipantId);
 
     return () => {
       manager.destroy();
       managerRef.current = null;
+      activePeerIdRef.current = null;
     };
-  }, [socket, currentParticipantId, otherParticipant?.id]);
+  }, [socket, currentParticipantId, otherParticipantId]);
 
-  // Handle incoming signaling messages
+  // Handle incoming signaling messages (fallback manual handler)
   const handleSignal = useCallback((signal: any) => {
     if (managerRef.current) {
       managerRef.current.handleSignal(signal);

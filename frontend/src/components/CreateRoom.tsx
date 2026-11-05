@@ -351,6 +351,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
         <ConnectedDevices
           participants={participants}
           participantCount={participantCount}
+          currentParticipantId={currentParticipantId}
           isOwner={true}
         />
 

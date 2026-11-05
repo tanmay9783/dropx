@@ -14,6 +14,14 @@ export function parseApiError(data: any, fallbackMessage: string, status?: numbe
   return fallbackMessage;
 }
 
+export async function safeParseJson(response: Response): Promise<any> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export interface HealthResponse {
   status: string;
   timestamp: string;
@@ -88,7 +96,7 @@ export async function createRoom(): Promise<CreateRoomResponse> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
-  const data = await response.json();
+  const data = await safeParseJson(response);
   if (!response.ok) {
     throw new Error(parseApiError(data, 'Failed to create room', response.status));
   }
@@ -99,7 +107,7 @@ export async function getPresence(roomCode: string, socketToken: string): Promis
   const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/presence`, {
     headers: { Authorization: `Bearer ${socketToken}` },
   });
-  const data = await response.json();
+  const data = await safeParseJson(response);
   if (!response.ok) {
     throw new Error(parseApiError(data, 'Failed to fetch room presence', response.status));
   }
@@ -108,10 +116,10 @@ export async function getPresence(roomCode: string, socketToken: string): Promis
 
 export async function getRoom(roomCode: string): Promise<GetRoomResponse> {
   const response = await fetch(`${API_BASE}/api/rooms/${roomCode}`);
-  const data = await response.json();
+  const data = await safeParseJson(response);
   if (!response.ok) {
     const error = new Error(parseApiError(data, 'Failed to fetch room', response.status)) as any;
-    error.code = data.error?.code;
+    error.code = data?.error?.code;
     error.status = response.status;
     throw error;
   }
@@ -123,10 +131,10 @@ export async function joinRoom(roomCode: string): Promise<JoinRoomResponse> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
-  const data = await response.json();
+  const data = await safeParseJson(response);
   if (!response.ok) {
     const error = new Error(parseApiError(data, 'Failed to join room', response.status)) as any;
-    error.code = data.error?.code;
+    error.code = data?.error?.code;
     error.status = response.status;
     throw error;
   }
@@ -404,7 +412,7 @@ export async function requestDownloadUrl(
       Authorization: `Bearer ${socketToken}`,
     },
   });
-  const data = await response.json();
+  const data = await safeParseJson(response);
   if (!response.ok) {
     throw new Error(parseApiError(data, 'Failed to generate download URL', response.status));
   }
@@ -424,7 +432,7 @@ export async function getSnippets(roomCode: string, socketToken: string): Promis
       Authorization: `Bearer ${socketToken}`,
     },
   });
-  const data = await response.json();
+  const data = await safeParseJson(response);
   if (!response.ok) {
     throw new Error(parseApiError(data, 'Failed to fetch room snippets', response.status));
   }

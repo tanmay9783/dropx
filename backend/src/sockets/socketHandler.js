@@ -62,13 +62,25 @@ export async function getRoomPresence(roomCode) {
   }
 }
 
-async function removeParticipantPresence(roomCode, participantId) {
+async function removeParticipantPresence(roomCode, participantId, socketId) {
   const redis = await getRedisClient();
   if (redis) {
     const key = `room:presence:${roomCode}`;
+    const raw = await redis.hget(key, participantId);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (socketId && parsed.socketId && parsed.socketId !== socketId) {
+          const all = await redis.hgetall(key);
+          return all ? Object.keys(all).length : 1;
+        }
+      } catch {
+        // Ignore parse error
+      }
+    }
     await redis.hdel(key, participantId);
-    const raw = await redis.hgetall(key);
-    const count = raw ? Object.keys(raw).length : 0;
+    const rawAll = await redis.hgetall(key);
+    const count = rawAll ? Object.keys(rawAll).length : 0;
     if (count === 0) {
       await redis.del(key);
     }
@@ -76,6 +88,10 @@ async function removeParticipantPresence(roomCode, participantId) {
   } else {
     const participantMap = roomSocketsMap.get(roomCode);
     if (participantMap && participantMap.has(participantId)) {
+      const existing = participantMap.get(participantId);
+      if (socketId && existing && existing.socketId && existing.socketId !== socketId) {
+        return participantMap.size;
+      }
       participantMap.delete(participantId);
       const remainingCount = participantMap.size;
       if (remainingCount === 0) {
@@ -227,7 +243,16 @@ async function handleSocketLeave(socket) {
   const { roomCode, participantId } = socket;
   if (!roomCode || !participantId) return;
 
-  const remainingCount = await removeParticipantPresence(roomCode, participantId);
+  const participantMap = roomSocketsMap.get(roomCode);
+  if (participantMap) {
+    const existing = participantMap.get(participantId);
+    if (existing && existing.socketId && existing.socketId !== socket.id) {
+      socket.leave(roomCode);
+      return;
+    }
+  }
+
+  const remainingCount = await removeParticipantPresence(roomCode, participantId, socket.id);
 
   // Broadcast user-left to remaining room members globally
   if (io) {

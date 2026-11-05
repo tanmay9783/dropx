@@ -19,13 +19,22 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
   currentParticipantId,
   isOwner = false,
 }) => {
-  // If participants array is empty, construct fallback entries from count
-  const displayList: ParticipantInfo[] = participants.length > 0 
-    ? participants 
-    : [
-        { id: isOwner ? 'Host Device' : 'host-1', role: 'owner', deviceName: 'Host Device' },
-        ...(participantCount > 1 ? [{ id: currentParticipantId || 'guest-1', role: 'participant', deviceName: 'Guest Device' }] : [])
-      ];
+  // Build deduplicated participant list ensuring user's current device is always present
+  let displayList: ParticipantInfo[] = [...participants];
+  if (displayList.length === 0) {
+    displayList = [
+      { id: currentParticipantId || (isOwner ? 'host-1' : 'guest-1'), role: isOwner ? 'owner' : 'participant', deviceName: isOwner ? 'Host Device' : 'Guest Device' },
+      ...(participantCount > 1 ? [{ id: 'peer-device', role: isOwner ? 'participant' : 'owner', deviceName: isOwner ? 'Guest Device' : 'Host Device' }] : [])
+    ];
+  } else if (currentParticipantId && !displayList.some((p) => p.id === currentParticipantId)) {
+    displayList.unshift({
+      id: currentParticipantId,
+      role: isOwner ? 'owner' : 'participant',
+      deviceName: isOwner ? 'Host Device' : 'Guest Device',
+    });
+  }
+
+  const activeCount = Math.max(displayList.length, participantCount, 1);
 
   const getDeviceIcon = (p: ParticipantInfo) => {
     if (p.role === 'owner') return <Crown className="w-4 h-4 text-yellow-400" />;
@@ -53,7 +62,7 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
           </span>
         </div>
         <span className="text-xs px-2.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 font-mono font-semibold border border-yellow-500/20">
-          {participantCount} Active
+          {activeCount} Active
         </span>
       </div>
 

@@ -1,6 +1,5 @@
-const CACHE_NAME = 'dropx-cache-v2';
+const CACHE_NAME = 'dropx-cache-v4';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/icon.svg',
   '/favicon.svg'
@@ -32,49 +31,29 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Bypass non-GET, API, and Socket.IO requests
+  // NEVER intercept non-GET, API, Socket.IO, navigation HTML, or Vite hashed /assets/
   if (
     event.request.method !== 'GET' ||
+    event.request.mode === 'navigate' ||
+    event.request.headers.get('accept')?.includes('text/html') ||
     url.pathname.startsWith('/api') ||
-    url.pathname.startsWith('/socket.io')
+    url.pathname.startsWith('/socket.io') ||
+    url.pathname.startsWith('/assets/')
   ) {
     return;
   }
 
-  // Network-First for HTML navigation requests (ensures fresh script hashes after deploy)
-  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return networkResponse;
-        })
-        .catch(async () => {
-          const cached = await caches.match(event.request);
-          if (cached) return cached;
-          return caches.match('/');
-        })
-    );
-    return;
-  }
-
-  // Stale-While-Revalidate for other static assets (icons, styles, scripts)
+  // Cache-first only for static icons and manifest
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return networkResponse;
-        })
-        .catch(() => cachedResponse);
-
-      return cachedResponse || fetchPromise;
+      if (cachedResponse) return cachedResponse;
+      return fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return networkResponse;
+      });
     })
   );
 });

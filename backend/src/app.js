@@ -32,21 +32,26 @@ app.use(
   })
 );
 
-// Global rate limiting with Redis store support
-const limiter = createLimiter({
+// Rate limiting with Redis store support for API routes
+const apiLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: process.env.NODE_ENV === 'test' ? 5000 : 2500,
+  limit: process.env.NODE_ENV === 'test' ? 5000 : 5000,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const auth = req.headers.authorization;
+    if (auth && auth.startsWith('Bearer ')) {
+      return `${req.ip}_${auth.substring(7, 30)}`;
+    }
+    return req.ip;
+  },
   skip: (req) => {
-    // Skip rate-limiting for health checks, readiness probes, and socket handshakes
-    if (req.path === '/api/health' || req.path === '/api/ready') return true;
+    if (req.path === '/health' || req.path === '/ready' || req.path === '/api/health' || req.path === '/api/ready') return true;
     if (req.path.startsWith('/socket.io')) return true;
     return false;
   },
   message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests, please try again later.' } },
 });
-app.use(limiter);
 
 // Structured HTTP Request Logging
 app.use(
@@ -66,6 +71,7 @@ app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 // Routes
 app.use('/api', healthRoutes);
+app.use('/api', apiLimiter);
 app.use('/api', roomRoutes);
 app.use('/api', fileRoutes);
 

@@ -33,7 +33,7 @@ export function createLimiter(options) {
   if (redisClient) {
     store = new RedisStore({
       sendCommand: (...args) => redisClient.call(...args),
-      prefix: 'rl:',
+      prefix: 'rl:v2:',
     });
   }
 

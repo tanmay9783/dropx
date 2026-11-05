@@ -143,7 +143,6 @@ export function useRoomSocket({
 
     socket.on('connect', () => {
       setStatus('CONNECTED');
-      fetchPresenceSync();
     });
 
     socket.on('disconnect', (reason) => {

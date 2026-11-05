@@ -85,10 +85,78 @@ export const localStorage = {
   },
 
   /**
+   * Returns directory path where intermediate chunks are stored.
+   */
+  getChunksDir(objectKey) {
+    return `${this.getFilePath(objectKey)}.chunks`;
+  },
+
+  /**
+   * Saves an individual binary chunk.
+   */
+  async saveChunk({ objectKey, chunkIndex, buffer }) {
+    const chunksDir = this.getChunksDir(objectKey);
+    await fs.promises.mkdir(chunksDir, { recursive: true });
+    const chunkPath = path.join(chunksDir, String(chunkIndex));
+    await fs.promises.writeFile(chunkPath, buffer);
+    return { success: true };
+  },
+
+  /**
+   * Returns list of chunk indices successfully saved to disk.
+   */
+  async getUploadedChunks({ objectKey }) {
+    const chunksDir = this.getChunksDir(objectKey);
+    try {
+      const files = await fs.promises.readdir(chunksDir);
+      return files.map((f) => parseInt(f, 10)).filter((n) => !isNaN(n)).sort((a, b) => a - b);
+    } catch (err) {
+      if (err.code === 'ENOENT') return [];
+      throw err;
+    }
+  },
+
+  /**
+   * Assembles all chunks sequentially into the final file.
+   */
+  async assembleChunks({ objectKey, totalChunks }) {
+    const filePath = this.getFilePath(objectKey);
+    const chunksDir = this.getChunksDir(objectKey);
+    await this.ensureDir(filePath);
+
+    const writeStream = fs.createWriteStream(filePath);
+
+    for (let i = 0; i < totalChunks; i++) {
+      const chunkPath = path.join(chunksDir, String(i));
+      const chunkBuffer = await fs.promises.readFile(chunkPath);
+      writeStream.write(chunkBuffer);
+    }
+
+    await new Promise((resolve, reject) => {
+      writeStream.end(resolve);
+      writeStream.on('error', reject);
+    });
+
+    // Clean up temporary chunks directory
+    try {
+      await fs.promises.rm(chunksDir, { recursive: true, force: true });
+    } catch (_) {}
+
+    const stat = await fs.promises.stat(filePath);
+    return { sizeBytes: stat.size };
+  },
+
+  /**
    * Deletes a single object from local disk.
    */
   async deleteObject({ objectKey }) {
     const filePath = this.getFilePath(objectKey);
+    const chunksDir = this.getChunksDir(objectKey);
+
+    try {
+      await fs.promises.rm(chunksDir, { recursive: true, force: true });
+    } catch (_) {}
+
     try {
       await fs.promises.unlink(filePath);
       return { success: true };

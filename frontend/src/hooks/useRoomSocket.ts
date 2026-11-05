@@ -26,6 +26,7 @@ interface UseRoomSocketOptions {
   onFileDeleted?: (fileId: string) => void;
   onSnippetCreated?: (snippet: any) => void;
   onSnippetDeleted?: (id: string) => void;
+  onWebRTCSignal?: (data: { fromParticipantId: string; toParticipantId?: string; signal: any }) => void;
 }
 
 export function useRoomSocket({
@@ -36,6 +37,7 @@ export function useRoomSocket({
   onFileDeleted,
   onSnippetCreated,
   onSnippetDeleted,
+  onWebRTCSignal,
 }: UseRoomSocketOptions) {
   const [status, setStatus] = useState<SocketStatus>('DISCONNECTED');
   const [participantCount, setParticipantCount] = useState<number>(1);
@@ -43,6 +45,16 @@ export function useRoomSocket({
   const [notifications, setNotifications] = useState<SocketNotification[]>([]);
 
   const socketRef = useRef<Socket | null>(null);
+
+  const currentParticipantId = (() => {
+    try {
+      if (!socketToken) return '';
+      const payload = JSON.parse(atob(socketToken.split('.')[1]));
+      return payload.participantId || '';
+    } catch {
+      return '';
+    }
+  })();
 
   const addNotification = useCallback((message: string, type: 'info' | 'warn' | 'success' = 'info') => {
     const newNotif: SocketNotification = {
@@ -168,6 +180,12 @@ export function useRoomSocket({
       }
     });
 
+    socket.on('webrtc:signal', (data: { fromParticipantId: string; toParticipantId?: string; signal: any }) => {
+      if (onWebRTCSignal) {
+        onWebRTCSignal(data);
+      }
+    });
+
     socket.on('room-expired', () => {
       addNotification('This sharing room has expired', 'warn');
       if (onRoomExpired) {
@@ -186,16 +204,19 @@ export function useRoomSocket({
       socket.off('file-deleted');
       socket.off('snippet:created');
       socket.off('snippet:deleted');
+      socket.off('webrtc:signal');
       socket.off('room-expired');
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [roomCode, socketToken, onRoomExpired, onFileUploaded, onFileDeleted, onSnippetCreated, onSnippetDeleted, addNotification, fetchPresenceSync]);
+  }, [roomCode, socketToken, onRoomExpired, onFileUploaded, onFileDeleted, onSnippetCreated, onSnippetDeleted, onWebRTCSignal, addNotification, fetchPresenceSync]);
 
   return {
     status,
     participantCount,
     participants,
     notifications,
+    currentParticipantId,
+    socket: socketRef.current,
   };
 }

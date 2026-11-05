@@ -54,6 +54,31 @@ router.put(
   fileController.uploadFileContent
 );
 
+// Upload Individual Chunk for Resumable Transfers
+router.put(
+  '/rooms/:roomCode/files/:fileId/chunk',
+  validateRoomCodeParam,
+  rawBodyParser,
+  fileController.uploadChunk
+);
+
+// Get Status of Uploaded Chunks for Resumption
+router.get(
+  '/rooms/:roomCode/files/:fileId/chunks',
+  validateRoomCodeParam,
+  authenticateRoomAccess,
+  fileController.getChunkStatus
+);
+
+// Confirm Chunked Upload Completion and Assemble
+router.post(
+  '/rooms/:roomCode/files/:fileId/chunked/complete',
+  completeUploadLimiter,
+  validateRoomCodeParam,
+  authenticateRoomAccess,
+  fileController.completeChunkedUpload
+);
+
 // Confirm Upload Completion
 router.post(
   '/rooms/:roomCode/files/:fileId/complete',

@@ -4,6 +4,7 @@ import { RoomData } from '../services/api';
 import { useCountdownTimer } from '../hooks/useCountdownTimer';
 import { useRoomSocket } from '../hooks/useRoomSocket';
 import { useRoomFiles } from '../hooks/useRoomFiles';
+import { useWebRTC } from '../hooks/useWebRTC';
 import { SharedFiles } from './SharedFiles';
 import { ConnectedDevices } from './ConnectedDevices';
 
@@ -48,10 +49,13 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     uploadProgress,
     uploadSpeedFormatted,
     etaFormatted,
+    zipping,
+    zipProgress,
     error: fileError,
     handleUploadFiles,
     handleDownloadFile,
     handleDeleteFile,
+    handleDownloadAllZip,
     addFileFromSocket,
     removeFileFromSocket,
   } = useRoomFiles({
@@ -61,8 +65,10 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     roomKey,
   });
 
+  const [webRTCSignalHandler, setWebRTCSignalHandler] = React.useState<((signal: any) => void) | null>(null);
+
   // Real-Time Socket Presence & File Events
-  const { status: socketStatus, participantCount, participants, notifications } = useRoomSocket({
+  const { status: socketStatus, participantCount, participants, notifications, socket } = useRoomSocket({
     roomCode: room.roomCode,
     socketToken,
     onRoomExpired: onExpire,
@@ -70,7 +76,22 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     onFileDeleted: removeFileFromSocket,
     onSnippetCreated: setNewSnippet,
     onSnippetDeleted: setDeletedSnippetId,
+    onWebRTCSignal: (data) => {
+      if (webRTCSignalHandler) {
+        webRTCSignalHandler(data.signal);
+      }
+    },
   });
+
+  const { p2pStatus, handleSignal } = useWebRTC({
+    socket,
+    currentParticipantId: participantId,
+    participants,
+  });
+
+  React.useEffect(() => {
+    setWebRTCSignalHandler(() => handleSignal);
+  }, [handleSignal]);
 
   return (
     <div className="max-w-2xl mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl transition-colors duration-300">
@@ -178,10 +199,14 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
           uploadProgress={uploadProgress}
           uploadSpeedFormatted={uploadSpeedFormatted}
           etaFormatted={etaFormatted}
+          zipping={zipping}
+          zipProgress={zipProgress}
+          p2pStatus={p2pStatus}
           error={fileError}
           onUpload={handleUploadFiles}
           onDownload={handleDownloadFile}
           onDelete={handleDeleteFile}
+          onDownloadAllZip={handleDownloadAllZip}
           newSnippet={newSnippet}
           deletedSnippetId={deletedSnippetId}
         />

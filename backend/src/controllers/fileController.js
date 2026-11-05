@@ -33,6 +33,51 @@ export const fileController = {
     }
   },
 
+  async uploadChunk(req, res, next) {
+    try {
+      const { roomCode, fileId } = req.params;
+      const chunkIndex = parseInt(req.query.index ?? req.headers['x-chunk-index'], 10);
+      if (isNaN(chunkIndex) || chunkIndex < 0) {
+        return res.status(400).json({ error: { code: 'INVALID_CHUNK_INDEX', message: 'Valid chunk index is required' } });
+      }
+      const buffer = req.body;
+      const result = await fileService.uploadChunk({ roomCode, fileId, chunkIndex, buffer });
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getChunkStatus(req, res, next) {
+    try {
+      const { roomCode, fileId } = req.params;
+      const result = await fileService.getChunkStatus({ roomCode, fileId });
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async completeChunkedUpload(req, res, next) {
+    try {
+      const { roomCode, fileId } = req.params;
+      const { participantId, role } = req.auth;
+      const totalChunks = parseInt(req.body.totalChunks, 10);
+
+      const result = await fileService.completeChunkedUpload({
+        roomCode,
+        fileId,
+        participantId,
+        role,
+        totalChunks,
+      });
+
+      res.status(200).json({ file: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async completeUpload(req, res, next) {
     try {
       const { roomCode, fileId } = req.params;

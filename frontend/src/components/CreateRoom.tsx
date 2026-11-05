@@ -22,6 +22,7 @@ import { RoomData, destroyRoom } from '../services/api';
 import { useCountdownTimer } from '../hooks/useCountdownTimer';
 import { useRoomSocket } from '../hooks/useRoomSocket';
 import { useRoomFiles } from '../hooks/useRoomFiles';
+import { useWebRTC } from '../hooks/useWebRTC';
 import { SharedFiles } from './SharedFiles';
 import { ConnectedDevices } from './ConnectedDevices';
 import { getJoinUrl } from '../utils/validation';
@@ -70,10 +71,13 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
     uploadProgress,
     uploadSpeedFormatted,
     etaFormatted,
+    zipping,
+    zipProgress,
     error: fileError,
     handleUploadFiles,
     handleDownloadFile,
     handleDeleteFile,
+    handleDownloadAllZip,
     addFileFromSocket,
     removeFileFromSocket,
   } = useRoomFiles({
@@ -82,8 +86,10 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
     roomKey,
   });
 
+  const [webRTCSignalHandler, setWebRTCSignalHandler] = React.useState<((signal: any) => void) | null>(null);
+
   // Real-Time Socket Presence & File Events
-  const { status: socketStatus, participantCount, participants, notifications } = useRoomSocket({
+  const { status: socketStatus, participantCount, participants, notifications, currentParticipantId, socket } = useRoomSocket({
     roomCode: room.roomCode,
     socketToken,
     onRoomExpired: onExpire,
@@ -91,7 +97,22 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
     onFileDeleted: removeFileFromSocket,
     onSnippetCreated: setNewSnippet,
     onSnippetDeleted: setDeletedSnippetId,
+    onWebRTCSignal: (data) => {
+      if (webRTCSignalHandler) {
+        webRTCSignalHandler(data.signal);
+      }
+    },
   });
+
+  const { p2pStatus, handleSignal } = useWebRTC({
+    socket,
+    currentParticipantId,
+    participants,
+  });
+
+  React.useEffect(() => {
+    setWebRTCSignalHandler(() => handleSignal);
+  }, [handleSignal]);
 
   const handleCopyCode = async () => {
     try {
@@ -349,6 +370,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           roomCode={room.roomCode}
           socketToken={socketToken}
           roomKey={roomKey}
+          currentParticipantId={currentParticipantId}
           files={files}
           loading={filesLoading}
           uploading={uploading}
@@ -356,10 +378,14 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           uploadProgress={uploadProgress}
           uploadSpeedFormatted={uploadSpeedFormatted}
           etaFormatted={etaFormatted}
+          zipping={zipping}
+          zipProgress={zipProgress}
+          p2pStatus={p2pStatus}
           error={fileError}
           onUpload={handleUploadFiles}
           onDownload={handleDownloadFile}
           onDelete={handleDeleteFile}
+          onDownloadAllZip={handleDownloadAllZip}
           newSnippet={newSnippet}
           deletedSnippetId={deletedSnippetId}
         />

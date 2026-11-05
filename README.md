@@ -72,6 +72,11 @@ DropX eliminates these friction points by combining **ephemeral room tokens**, *
 ## Key Features
 
 - **Instant Zero-Config Pairing**: Pair any smartphone, tablet, or desktop in less than 3 seconds by scanning an SVG QR code or entering a 6-character room code.
+- **Direct WebRTC DataChannels for LAN Transfers**: Automatically discovers peers on the local Wi-Fi network and streams files peer-to-peer over WebRTC DataChannels with backpressure flow-control (`bufferedAmount`), unlocking 50–100 MB/s transfer speeds with zero server bandwidth.
+- **Resumable / Chunked Upload Pipeline**: Slices large files into 2MB chunks with 3x retry resilience, persistent chunk status tracking (`GET /chunks`), real-time upload progress, speed and ETA estimation, and atomic server-side assembly.
+- **"Download All as ZIP" (Client-Side Archival)**: Pure browser-side PKZip 2.0 streaming builder with standard IEEE 802.3 CRC-32 checksum calculation, bundling all room assets into a single `.zip` file on the fly with zero extra server requests.
+- **In-Browser File Previews**: High-performance interactive modal previewing images, responsive HTML5 video, audio streaming, PDF documents, and syntax-styled code/text with one-click copy and seamless client-side E2EE decryption.
+- **Folder Drag-and-Drop & Directory Traversal**: Recursive folder ingestion using the HTML5 File System API (`webkitGetAsEntry`), preserving directory structures upon upload and download.
 - **Client-Side Zero-Knowledge Encryption (E2EE)**: Sensitive payloads and text snippets can be encrypted directly in the browser via AES-256-GCM using keys derived from the room code with Web Crypto API (`window.crypto.subtle`). The server operates as an untrusted blind broker.
 - **Memory-Bound Streaming I/O**: Direct stream piping (`express.raw`) ensures the Node.js process buffers only small stream chunks (~64KB) rather than holding 100MB payloads in the V8 heap.
 - **Real-Time Live Clipboard**: Bi-directional text synchronization synchronizes code snippets, links, and passwords across all paired devices via WebSocket events.
@@ -268,6 +273,9 @@ erDiagram
 | `DELETE` | `/api/rooms/:roomCode` | Owner Token | Destroys room immediately, deleting all physical files and snippets |
 | `POST` | `/api/rooms/:roomCode/files/upload-url` | Bearer Token | Validates quota and issues upload slot |
 | `PUT` | `/api/rooms/:roomCode/files/:fileId/upload` | No (Slot ID) | Streams raw binary payload into local storage sink |
+| `PUT` | `/api/rooms/:roomCode/files/:fileId/chunk?index=N` | No (Slot ID) | Streams individual binary chunk for resumable uploads |
+| `GET` | `/api/rooms/:roomCode/files/:fileId/chunks` | No (Slot ID) | Returns list of already uploaded chunk indices for resume |
+| `POST` | `/api/rooms/:roomCode/files/:fileId/chunked/complete` | Bearer Token | Reassembles chunks, verifies integrity, and broadcasts upload |
 | `POST` | `/api/rooms/:roomCode/files/:fileId/complete` | Bearer Token | Verifies disk size and broadcasts `file-uploaded` |
 | `GET` | `/api/rooms/:roomCode/files` | Bearer Token | Returns metadata list of active shared files in room |
 | `GET` | `/api/rooms/:roomCode/files/:fileId/download-url`| Bearer Token | Generates download link for file |
@@ -291,6 +299,7 @@ erDiagram
 | `file-deleted` | Server ➔ Client | `{ fileId, roomCode }` | Dispatched when a file is unlinked |
 | `snippet:created` | Server ➔ Client | `{ id, roomCode, content, createdAt }` | Dispatched when a text snippet is shared |
 | `snippet:deleted` | Server ➔ Client | `{ id, roomCode }` | Dispatched when a text snippet is removed |
+| `webrtc:signal` | Bidirectional | `{ toParticipantId, signal }` | Relays SDP offer/answer & ICE candidates for direct LAN P2P |
 | `room-expired` | Server ➔ Client | `{ roomCode, message }` | Dispatched on room timeout or host deletion |
 
 ---

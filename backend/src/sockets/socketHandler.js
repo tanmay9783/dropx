@@ -198,6 +198,16 @@ export function initSocketIo(httpServer) {
       participantCount: presence.count,
     });
 
+    // WebRTC Signaling Relay for Direct LAN P2P
+    socket.on('webrtc:signal', (data) => {
+      if (!data || !data.signal) return;
+      socket.to(roomCode).emit('webrtc:signal', {
+        fromParticipantId: participantId,
+        toParticipantId: data.toParticipantId,
+        signal: data.signal,
+      });
+    });
+
     // Handle explicit leave-room
     socket.on('leave-room', async () => {
       await handleSocketLeave(socket);

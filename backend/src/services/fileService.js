@@ -107,6 +107,96 @@ export const fileService = {
   },
 
   /**
+   * Saves an individual uploaded chunk.
+   */
+  async uploadChunk({ roomCode, fileId, chunkIndex, buffer }) {
+    await roomService.getRoom(roomCode);
+    const record = await fileRepository.findFileById(fileId, roomCode);
+    if (!record) {
+      throw createError('FILE_NOT_FOUND', 'Upload metadata not found', 404);
+    }
+    if (record.status !== 'pending') {
+      throw createError('INVALID_STATE', 'File upload is no longer in pending state', 400);
+    }
+    await localStorage.saveChunk({ objectKey: record.objectKey, chunkIndex, buffer });
+    return { success: true, chunkIndex };
+  },
+
+  /**
+   * Returns list of uploaded chunks for resuming interrupted transfers.
+   */
+  async getChunkStatus({ roomCode, fileId }) {
+    await roomService.getRoom(roomCode);
+    const record = await fileRepository.findFileById(fileId, roomCode);
+    if (!record) {
+      throw createError('FILE_NOT_FOUND', 'Upload metadata not found', 404);
+    }
+    const uploadedChunks = await localStorage.getUploadedChunks({ objectKey: record.objectKey });
+    return { fileId, uploadedChunks };
+  },
+
+  /**
+   * Assembles all chunks and marks upload completed.
+   */
+  async completeChunkedUpload({ roomCode, fileId, participantId, role, totalChunks }) {
+    if (!totalChunks || typeof totalChunks !== 'number' || totalChunks <= 0) {
+      throw createError('INVALID_INPUT', 'totalChunks must be a positive integer', 400);
+    }
+
+    try {
+      await roomService.getRoom(roomCode);
+    } catch (roomErr) {
+      const record = await fileRepository.findFileById(fileId, roomCode);
+      if (record) {
+        await localStorage.deleteObject({ objectKey: record.objectKey });
+        await fileRepository.updateFileStatus(fileId, 'expired');
+      }
+      throw roomErr;
+    }
+
+    const record = await fileRepository.findFileById(fileId, roomCode);
+    if (!record) {
+      throw createError('FILE_NOT_FOUND', 'Upload metadata not found', 404);
+    }
+
+    if (role !== 'owner' && participantId && record.participantId !== participantId) {
+      throw createError('FORBIDDEN', 'You are not authorized to complete this upload', 403);
+    }
+
+    const uploaded = await localStorage.getUploadedChunks({ objectKey: record.objectKey });
+    if (uploaded.length < totalChunks) {
+      throw createError('INCOMPLETE_CHUNKS', `Missing chunks: uploaded ${uploaded.length} of ${totalChunks}`, 400);
+    }
+
+    const { sizeBytes } = await localStorage.assembleChunks({ objectKey: record.objectKey, totalChunks });
+
+    await fileRepository.updateFileStatus(fileId, 'active', sizeBytes);
+
+    const fileMetadata = {
+      id: record.id,
+      roomCode: record.roomCode,
+      participantId: record.participantId,
+      originalName: record.originalName,
+      mimeType: record.mimeType,
+      sizeBytes: Number(sizeBytes),
+      createdAt: record.createdAt,
+      deviceName: record.deviceName,
+    };
+
+    try {
+      const { getSocketIo } = await import('../sockets/socketHandler.js');
+      const io = getSocketIo();
+      if (io) {
+        io.to(roomCode).emit('file-uploaded', fileMetadata);
+      }
+    } catch (err) {
+      logger.error({ errMessage: err.message }, 'Failed to broadcast file-uploaded event');
+    }
+
+    return fileMetadata;
+  },
+
+  /**
    * Verifies local file completion and updates DB record to 'active'.
    */
   async completeUpload({ roomCode, fileId, participantId, role }) {

@@ -13,11 +13,18 @@ import {
   FileCheck2,
   Sparkles,
   Zap,
-  Clock
+  Clock,
+  Eye,
+  Archive,
+  Folder,
+  Wifi
 } from 'lucide-react';
 import { SharedFile } from '../services/api';
 import { formatBytes } from '../utils/format';
 import { TextSnippets } from './TextSnippets';
+import { FilePreviewModal } from './FilePreviewModal';
+import { traverseDataTransferItems } from '../utils/fileTraverse';
+import { UploadItem } from '../hooks/useRoomFiles';
 
 interface SharedFilesProps {
   roomCode?: string;
@@ -31,10 +38,14 @@ interface SharedFilesProps {
   uploadProgress: number;
   uploadSpeedFormatted?: string;
   etaFormatted?: string;
+  zipping?: boolean;
+  zipProgress?: string;
+  p2pStatus?: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED';
   error: string | null;
-  onUpload: (files: FileList | File[]) => void;
+  onUpload: (files: FileList | File[] | UploadItem[]) => void;
   onDownload?: (fileId: string) => void;
   onDelete: (fileId: string) => void;
+  onDownloadAllZip?: () => void;
   newSnippet?: any;
   deletedSnippetId?: string | null;
 }
@@ -51,17 +62,23 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
   uploadProgress,
   uploadSpeedFormatted,
   etaFormatted,
+  zipping = false,
+  zipProgress = '',
+  p2pStatus = 'DISCONNECTED',
   error,
   onUpload,
   onDownload,
   onDelete,
+  onDownloadAllZip,
   newSnippet,
   deletedSnippetId,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [recentUploadName, setRecentUploadName] = useState<string | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [previewingFile, setPreviewingFile] = useState<SharedFile | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -72,12 +89,30 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
     }
   };
 
-  const processFiles = (fileList: FileList | File[]) => {
-    const filesArray = Array.from(fileList);
-    setRecentUploadName(filesArray[0]?.name || 'files');
+  const handleFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const items: UploadItem[] = Array.from(e.target.files).map((f) => ({
+        file: f,
+        relativePath: (f as any).webkitRelativePath || f.name,
+      }));
+      processFiles(items);
+      if (folderInputRef.current) {
+        folderInputRef.current.value = '';
+      }
+    }
+  };
+
+  const processFiles = (fileList: FileList | File[] | UploadItem[]) => {
+    const filesArray = Array.from(fileList as any[]);
+    const firstItem = filesArray[0];
+    const name = firstItem?.relativePath || firstItem?.name || firstItem?.file?.name || 'files';
+    setRecentUploadName(name);
 
     // Create local object URL previews for images
-    const imageFiles = filesArray.filter((f) => f.type.startsWith('image/'));
+    const imageFiles = filesArray
+      .map((item) => (item instanceof File ? item : item.file || item))
+      .filter((f) => f && f.type && f.type.startsWith('image/'));
+
     const urls = imageFiles.map((f) => URL.createObjectURL(f));
     setPreviewUrls(urls);
 
@@ -96,59 +131,108 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFiles(e.dataTransfer.files);
-    }
-  }, [onUpload]);
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
+
+      if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+        // Recursively traverse folders and files
+        const traversed = await traverseDataTransferItems(e.dataTransfer.items);
+        if (traversed.length > 0) {
+          processFiles(traversed);
+          return;
+        }
+      }
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        processFiles(e.dataTransfer.files);
+      }
+    },
+    [onUpload]
+  );
 
   const renderFileIcon = (mimeType: string, filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase() || '';
     if (mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
-      return <ImageIcon className="w-5 h-5 text-cyan-500 dark:text-cyan-400" />;
+      return <ImageIcon className="w-5 h-5 text-cyan-400" />;
     }
     if (mimeType.startsWith('video/') || ['mp4', 'mkv', 'webm', 'mov'].includes(ext)) {
-      return <Film className="w-5 h-5 text-violet-500 dark:text-violet-400" />;
+      return <Film className="w-5 h-5 text-violet-400" />;
     }
     if (['zip', 'rar', 'tar', 'gz', '7z'].includes(ext)) {
-      return <FileArchive className="w-5 h-5 text-amber-500 dark:text-amber-400" />;
+      return <FileArchive className="w-5 h-5 text-amber-400" />;
     }
     if (mimeType.startsWith('text/') || ['pdf', 'doc', 'docx', 'txt', 'md'].includes(ext)) {
-      return <FileText className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />;
+      return <FileText className="w-5 h-5 text-emerald-400" />;
     }
-    return <FileGeneric className="w-5 h-5 text-slate-500 dark:text-slate-400" />;
+    return <FileGeneric className="w-5 h-5 text-slate-400" />;
   };
 
   const totalBytesShared = files.reduce((acc, f) => acc + (f.sizeBytes || 0), 0);
 
   return (
-    <div className="w-full mt-8 pt-8 border-t border-slate-200/80 dark:border-slate-800/80 text-left">
+    <div className="w-full mt-8 pt-8 border-t border-slate-800/80 text-left">
       {/* Header & Stats Strip */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
         <div>
-          <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
-            <span>Shared Files</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 font-mono font-bold">
-              {files.length}
-            </span>
-          </h3>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
+              <span>Shared Files</span>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 font-mono font-bold">
+                {files.length}
+              </span>
+            </h3>
+
+            {p2pStatus === 'CONNECTED' && (
+              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold tracking-wide animate-pulse">
+                <Wifi className="w-3 h-3 text-emerald-400" />
+                <span>P2P Direct LAN</span>
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-400 mt-1">
-            Direct high-speed local file transfers.
+            Fast, zero-knowledge local file & folder sync.
           </p>
         </div>
 
-        {files.length > 0 && (
-          <div className="flex items-center space-x-2 text-xs font-mono text-slate-400 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
-            <HardDrive className="w-3.5 h-3.5 text-yellow-400" />
-            <span>Total: {formatBytes(totalBytesShared)}</span>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {files.length > 0 && (
+            <div className="flex items-center space-x-1.5 text-xs font-mono text-slate-400 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
+              <HardDrive className="w-3.5 h-3.5 text-yellow-400" />
+              <span>{formatBytes(totalBytesShared)}</span>
+            </div>
+          )}
+
+          {/* Download All as ZIP Button */}
+          {files.length > 0 && onDownloadAllZip && (
+            <button
+              onClick={onDownloadAllZip}
+              disabled={zipping}
+              className="py-1.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-yellow-400 border border-yellow-500/40 text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+              title="Download all files bundled into a single ZIP archive"
+            >
+              {zipping ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-yellow-400" />
+              ) : (
+                <Archive className="w-3.5 h-3.5 text-yellow-400" />
+              )}
+              <span>{zipping ? 'Zipping...' : 'Download All (.ZIP)'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Hidden File Input */}
+      {/* ZIP Compression Progress Banner */}
+      {zipping && (
+        <div className="mb-4 p-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-xs flex items-center space-x-2.5 animate-fade-in">
+          <RefreshCw className="w-4 h-4 animate-spin text-yellow-400 flex-shrink-0" />
+          <span className="font-semibold">{zipProgress || 'Packaging ZIP archive...'}</span>
+        </div>
+      )}
+
+      {/* Hidden File & Folder Inputs */}
       <input
         type="file"
         ref={fileInputRef}
@@ -157,8 +241,17 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
         className="hidden"
         id="file-upload-input"
       />
+      <input
+        type="file"
+        ref={folderInputRef}
+        onChange={handleFolderChange}
+        multiple
+        {...({ webkitdirectory: '', directory: '' } as any)}
+        className="hidden"
+        id="folder-upload-input"
+      />
 
-      {/* Modern Drag & Drop Upload Zone */}
+      {/* Modern Drag & Drop Upload Zone (supports files AND folders) */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -179,22 +272,43 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
         </div>
 
         <h4 className="text-sm font-bold text-white mb-1">
-          {uploading ? 'Uploading File...' : 'Drop files here or click to browse'}
+          {uploading ? 'Streaming File Data...' : 'Drop files or folders here'}
         </h4>
         <p className="text-xs text-slate-400 max-w-sm mb-3">
-          Photos, videos, PDFs, and documents up to 100MB per file.
+          Drag & drop any file or folder hierarchy up to 100MB.
         </p>
 
-        <div className="flex items-center space-x-2 text-[11px] font-semibold text-yellow-400">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Encrypted Direct File Upload</span>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              folderInputRef.current?.click();
+            }}
+            className="py-1 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-yellow-400 border border-yellow-500/30 text-[11px] font-bold flex items-center space-x-1.5 transition-all"
+          >
+            <Folder className="w-3.5 h-3.5" />
+            <span>Upload Entire Folder</span>
+          </button>
+
+          <span className="text-[11px] font-semibold text-slate-500">•</span>
+
+          <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-yellow-400">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Resumable Chunks & E2EE</span>
+          </div>
         </div>
 
         {/* Thumbnail Previews during upload selection */}
         {previewUrls.length > 0 && !uploading && (
           <div className="flex items-center space-x-2 mt-4">
             {previewUrls.slice(0, 4).map((url, i) => (
-              <img key={i} src={url} alt="preview" className="w-10 h-10 object-cover rounded-lg border border-yellow-500/30 shadow-xs" />
+              <img
+                key={i}
+                src={url}
+                alt="preview"
+                className="w-10 h-10 object-cover rounded-lg border border-yellow-500/30 shadow-xs"
+              />
             ))}
           </div>
         )}
@@ -272,7 +386,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
           <FileCheck2 className="w-8 h-8 text-slate-500 mx-auto mb-2 opacity-60" />
           <h4 className="text-xs font-bold text-slate-300 mb-1">No files in room yet</h4>
           <p className="text-[11px] text-slate-400">
-            Drag and drop or select files above to share instantly with connected devices.
+            Drag and drop or select files and folders above to share instantly with connected devices.
           </p>
         </div>
       ) : (
@@ -281,6 +395,9 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
           {files.map((file) => {
             const isUploader = currentParticipantId && file.participantId === currentParticipantId;
             const isDownloading = downloadingId === file.id;
+            const hasSubfolder = file.originalName.includes('/');
+            const displayTitle = hasSubfolder ? file.originalName.split('/').pop() : file.originalName;
+            const folderPath = hasSubfolder ? file.originalName.substring(0, file.originalName.lastIndexOf('/')) : null;
 
             return (
               <div
@@ -292,18 +409,37 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
                     {renderFileIcon(file.mimeType, file.originalName)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-xs sm:text-sm font-bold text-white truncate pr-2" title={file.originalName}>
-                      {file.originalName}
-                    </h4>
+                    <div className="flex items-center space-x-2">
+                      <h4 className="text-xs sm:text-sm font-bold text-white truncate" title={file.originalName}>
+                        {displayTitle}
+                      </h4>
+                      {folderPath && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-900 text-slate-400 border border-slate-800 truncate max-w-[120px]" title={folderPath}>
+                          📁 {folderPath}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center space-x-2 text-[11px] text-slate-400 mt-0.5">
                       <span className="font-mono font-semibold text-yellow-400">{formatBytes(file.sizeBytes)}</span>
                       <span>•</span>
-                      <span className="truncate max-w-[120px] sm:max-w-xs">{isUploader ? 'Uploaded by You' : `Uploaded by ${file.deviceName || 'Member'}`}</span>
+                      <span className="truncate max-w-[120px] sm:max-w-xs">
+                        {isUploader ? 'Uploaded by You' : `Uploaded by ${file.deviceName || 'Member'}`}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                  {/* In-Browser Preview Button */}
+                  <button
+                    onClick={() => setPreviewingFile(file)}
+                    className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-yellow-400 border border-slate-800 hover:border-yellow-500/30 text-xs font-bold transition-all flex items-center space-x-1.5 active:scale-95"
+                    title="Preview file in browser"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Preview</span>
+                  </button>
+
                   {/* Direct download button */}
                   <button
                     onClick={() => onDownload && onDownload(file.id)}
@@ -331,6 +467,20 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
             );
           })}
         </div>
+      )}
+
+      {/* In-Browser File Preview Modal */}
+      {previewingFile && roomCode && socketToken && (
+        <FilePreviewModal
+          file={previewingFile}
+          roomCode={roomCode}
+          socketToken={socketToken}
+          roomKey={roomKey}
+          onClose={() => setPreviewingFile(null)}
+          onDownload={(id) => {
+            if (onDownload) onDownload(id);
+          }}
+        />
       )}
     </div>
   );

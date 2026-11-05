@@ -2,6 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { getFiles, uploadFile, deleteFile, requestDownloadUrl, SharedFile } from '../services/api';
 import { encryptBlob, decryptBlob } from '../utils/crypto';
 import { formatBytes } from '../utils/format';
+import { createZipBlob, ZipFileEntry } from '../utils/zip';
+
+export interface UploadItem {
+  file: File;
+  relativePath?: string;
+}
 
 interface UseRoomFilesOptions {
   roomCode: string | null;
@@ -18,6 +24,8 @@ export function useRoomFiles({ roomCode, socketToken, roomKey }: UseRoomFilesOpt
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadSpeedFormatted, setUploadSpeedFormatted] = useState<string>('');
   const [etaFormatted, setEtaFormatted] = useState<string>('');
+  const [zipping, setZipping] = useState<boolean>(false);
+  const [zipProgress, setZipProgress] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   // Fetch files list with optional silent loading indicator
@@ -54,8 +62,8 @@ export function useRoomFiles({ roomCode, socketToken, roomKey }: UseRoomFilesOpt
     };
   }, [loadFiles]);
 
-  // Handle local upload of selected FileList
-  const handleUploadFiles = async (fileList: FileList | File[]) => {
+  // Handle local upload of selected FileList, File array, or dropped folder items
+  const handleUploadFiles = async (fileList: FileList | File[] | UploadItem[]) => {
     if (!roomCode || !socketToken || fileList.length === 0) return;
 
     setUploading(true);
@@ -64,11 +72,14 @@ export function useRoomFiles({ roomCode, socketToken, roomKey }: UseRoomFilesOpt
     setEtaFormatted('');
     setError(null);
 
-    const filesArray = Array.from(fileList);
+    const items = Array.from(fileList as any[]);
 
     try {
-      for (let i = 0; i < filesArray.length; i++) {
-        const file = filesArray[i];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const file: File = item instanceof File ? item : item.file || item;
+        const uploadName: string = item.relativePath || file.name;
+
         let payload: Blob = file;
 
         // Transparent Zero-Knowledge Encrypt if roomKey present
@@ -82,7 +93,7 @@ export function useRoomFiles({ roomCode, socketToken, roomKey }: UseRoomFilesOpt
           roomCode,
           socketToken,
           payload,
-          file.name,
+          uploadName,
           (percent, loadedBytes, totalBytes) => {
             setUploadProgress(percent);
 
@@ -110,6 +121,60 @@ export function useRoomFiles({ roomCode, socketToken, roomKey }: UseRoomFilesOpt
       setUploadProgress(0);
       setUploadSpeedFormatted('');
       setEtaFormatted('');
+    }
+  };
+
+  // Download all room files bundled into a single ZIP archive
+  const handleDownloadAllZip = async () => {
+    if (!roomCode || !socketToken || files.length === 0) return;
+
+    setZipping(true);
+    setZipProgress(`Preparing 0 of ${files.length} files...`);
+    setError(null);
+
+    try {
+      const zipEntries: ZipFileEntry[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setZipProgress(`Downloading & decrypting ${i + 1} of ${files.length}: ${file.originalName}`);
+
+        const { downloadUrl } = await requestDownloadUrl(roomCode, file.id, socketToken);
+        const finalUrl = downloadUrl.startsWith('/')
+          ? `${import.meta.env.VITE_API_URL || ''}${downloadUrl}`
+          : downloadUrl;
+
+        const response = await fetch(finalUrl);
+        let blob = await response.blob();
+
+        if (roomKey) {
+          blob = await decryptBlob(blob, roomKey, file.mimeType);
+        }
+
+        const arrayBuffer = await blob.arrayBuffer();
+        zipEntries.push({
+          path: file.originalName,
+          data: new Uint8Array(arrayBuffer),
+          lastModified: new Date(file.createdAt),
+        });
+      }
+
+      setZipProgress('Compressing archive...');
+      const zipBlob = createZipBlob(zipEntries);
+
+      const objectUrl = URL.createObjectURL(zipBlob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = `DropX-Room-${roomCode}.zip`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(objectUrl);
+    } catch (err: any) {
+      setError(err.message || 'Failed to download ZIP archive');
+    } finally {
+      setZipping(false);
+      setZipProgress('');
     }
   };
 
@@ -184,10 +249,13 @@ export function useRoomFiles({ roomCode, socketToken, roomKey }: UseRoomFilesOpt
     uploadProgress,
     uploadSpeedFormatted,
     etaFormatted,
+    zipping,
+    zipProgress,
     error,
     handleUploadFiles,
     handleDownloadFile,
     handleDeleteFile,
+    handleDownloadAllZip,
     addFileFromSocket,
     removeFileFromSocket,
   };

@@ -220,6 +220,61 @@ export async function completeUpload(
   return data;
 }
 
+export async function getChunkStatus(
+  roomCode: string,
+  fileId: string,
+  socketToken: string
+): Promise<{ fileId: string; uploadedChunks: number[] }> {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files/${fileId}/chunks`, {
+    headers: { Authorization: `Bearer ${socketToken}` },
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Failed to fetch chunk status');
+  }
+  return data;
+}
+
+export async function uploadChunk(
+  roomCode: string,
+  fileId: string,
+  chunkIndex: number,
+  chunkBlob: Blob
+): Promise<void> {
+  const url = `${API_BASE}/api/rooms/${roomCode}/files/${fileId}/chunk?index=${chunkIndex}`;
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/octet-stream',
+    },
+    body: chunkBlob,
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to upload chunk ${chunkIndex} (status: ${response.status})`);
+  }
+}
+
+export async function completeChunkedUpload(
+  roomCode: string,
+  fileId: string,
+  totalChunks: number,
+  socketToken: string
+): Promise<{ file: SharedFile }> {
+  const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files/${fileId}/chunked/complete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${socketToken}`,
+    },
+    body: JSON.stringify({ totalChunks }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Failed to assemble chunked upload');
+  }
+  return data;
+}
+
 export async function uploadFile(
   roomCode: string,
   socketToken: string,
@@ -227,11 +282,11 @@ export async function uploadFile(
   fileName?: string,
   onProgress?: (percent: number, loadedBytes: number, totalBytes: number) => void
 ): Promise<{ file: SharedFile }> {
-  // 1. Request presigned upload URL
   const fileToUpload = file as File;
   const name = fileName || fileToUpload.name || 'file';
   const size = file.size;
 
+  // 1. Request presigned upload URL / slot
   const response = await fetch(`${API_BASE}/api/rooms/${roomCode}/files/upload-url`, {
     method: 'POST',
     headers: {
@@ -242,7 +297,7 @@ export async function uploadFile(
       fileName: name,
       contentType: file.type || 'application/octet-stream',
       sizeBytes: size,
-      deviceName: (await import('./../utils/device')).getDeviceName()
+      deviceName: (await import('./../utils/device')).getDeviceName(),
     }),
   });
   const data = await response.json();
@@ -250,10 +305,51 @@ export async function uploadFile(
     throw new Error(data.error?.message || 'Failed to request upload URL');
   }
 
-  // 2. Upload file directly to server local storage
-  await uploadFileStorage(data.uploadUrl, file, onProgress);
+  const CHUNK_THRESHOLD = 4 * 1024 * 1024; // 4MB threshold for chunked upload
+  const CHUNK_SIZE = 2 * 1024 * 1024;      // 2MB chunk size
 
-  // 3. Confirm completion with server
+  // 2A. Resumable Chunked Upload for files > 4MB
+  if (size > CHUNK_THRESHOLD) {
+    const totalChunks = Math.ceil(size / CHUNK_SIZE);
+    let uploadedBytes = 0;
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, size);
+      const chunkBlob = file.slice(start, end);
+
+      // Retry up to 3 times per chunk for network resilience
+      let attempts = 0;
+      let success = false;
+      let lastErr: any;
+
+      while (attempts < 3 && !success) {
+        try {
+          await uploadChunk(roomCode, data.fileId, i, chunkBlob);
+          success = true;
+        } catch (err) {
+          attempts++;
+          lastErr = err;
+          await new Promise((r) => setTimeout(r, 800 * attempts));
+        }
+      }
+
+      if (!success) {
+        throw new Error(lastErr?.message || `Failed to upload chunk ${i + 1} after 3 attempts`);
+      }
+
+      uploadedBytes += (end - start);
+      if (onProgress) {
+        const percent = Math.round((uploadedBytes / size) * 100);
+        onProgress(percent, uploadedBytes, size);
+      }
+    }
+
+    return completeChunkedUpload(roomCode, data.fileId, totalChunks, socketToken);
+  }
+
+  // 2B. Direct single PUT stream for files <= 4MB
+  await uploadFileStorage(data.uploadUrl, file, onProgress);
   return completeUpload(roomCode, data.fileId, socketToken);
 }
 

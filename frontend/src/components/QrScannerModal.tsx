@@ -389,3 +389,4 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onScan, onClose 
     </div>
   );
 };
+

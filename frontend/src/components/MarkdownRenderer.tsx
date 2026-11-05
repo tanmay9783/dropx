@@ -174,3 +174,4 @@ function renderInlineFormatting(text: string): React.ReactNode {
 
   return <>{parts}</>;
 }
+

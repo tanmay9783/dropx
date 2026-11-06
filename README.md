@@ -72,6 +72,8 @@ DropX eliminates these friction points by combining **ephemeral room tokens**, *
 ## Key Features
 
 - **Instant Zero-Config Pairing**: Pair any smartphone, tablet, or desktop in less than 3 seconds by scanning an SVG QR code or entering a 6-character room code.
+- **"Snap & Drop" Instant Camera Capture**: 1-tap mobile hardware camera integration (`capture="environment"`) allowing users to snap physical documents, whiteboard notes, or photos and immediately stream them encrypted into the room without cluttering local device galleries.
+- **Global Clipboard Paste Anywhere (`Ctrl+V` / `Cmd+V`)**: Pressing `Ctrl+V` or `Cmd+V` anywhere on the page instantly captures screenshots (e.g. from `Win+Shift+S` or `Cmd+Shift+4`), copied files, or clipboard text, automatically streaming them as encrypted room assets or syncing to Live Clipboard.
 - **Direct WebRTC DataChannels for LAN Transfers**: Automatically discovers peers on the local Wi-Fi network and streams files peer-to-peer over WebRTC DataChannels with backpressure flow-control (`bufferedAmount`), unlocking 50–100 MB/s transfer speeds with zero server bandwidth.
 - **Resumable / Chunked Upload Pipeline**: Slices large files into 2MB chunks with 3x retry resilience, persistent chunk status tracking (`GET /chunks`), real-time upload progress, speed and ETA estimation, and atomic server-side assembly.
 - **"Download All as ZIP" (Client-Side Archival)**: Pure browser-side PKZip 2.0 streaming builder with standard IEEE 802.3 CRC-32 checksum calculation, bundling all room assets into a single `.zip` file on the fly with zero extra server requests.

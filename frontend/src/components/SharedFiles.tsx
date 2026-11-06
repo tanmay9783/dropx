@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { 
   UploadCloud, 
   Download, 
@@ -17,9 +17,13 @@ import {
   Eye,
   Archive,
   Folder,
-  Wifi
+  Wifi,
+  Camera,
+  Clipboard,
+  X
 } from 'lucide-react';
-import { SharedFile } from '../services/api';
+import { SharedFile, createSnippet } from '../services/api';
+import { encryptText } from '../utils/crypto';
 import { formatBytes } from '../utils/format';
 import { TextSnippets } from './TextSnippets';
 import { FilePreviewModal } from './FilePreviewModal';
@@ -75,14 +79,120 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [recentUploadName, setRecentUploadName] = useState<string | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [previewingFile, setPreviewingFile] = useState<SharedFile | null>(null);
+  const [pasteNotice, setPasteNotice] = useState<string | null>(null);
 
   const handleClosePreview = useCallback(() => {
     setPreviewingFile(null);
   }, []);
+
+  const handleCameraSnap = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const rawFile = e.target.files[0];
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      const ext = rawFile.name?.split('.').pop() || (rawFile.type ? rawFile.type.split('/')[1] || 'jpg' : 'jpg');
+      const snapFileName = `Snap-${timestamp}.${ext}`;
+      const snapFile = new File([rawFile], snapFileName, { type: rawFile.type || 'image/jpeg' });
+
+      setPasteNotice(`📸 Photo snapped! Uploading ${snapFileName}...`);
+      setTimeout(() => setPasteNotice(null), 3500);
+      processFiles([snapFile]);
+
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Global Clipboard Paste Listener (Ctrl+V / Cmd+V anywhere in the room)
+  useEffect(() => {
+    const handleGlobalPaste = async (e: ClipboardEvent) => {
+      // Don't intercept if user is actively typing in an input, textarea, or contentEditable element
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable ||
+          target.getAttribute('role') === 'textbox' ||
+          target.closest('input, textarea, [contenteditable="true"]'))
+      ) {
+        return;
+      }
+
+      if (!e.clipboardData) return;
+
+      const items = e.clipboardData.items;
+      const filesToUpload: File[] = [];
+
+      // 1. Check for files/images in clipboard (e.g. screenshots from Win+Shift+S / Cmd+Shift+4)
+      if (items && items.length > 0) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.kind === 'file') {
+            const file = item.getAsFile();
+            if (file) {
+              const now = new Date();
+              const pad = (n: number) => String(n).padStart(2, '0');
+              const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+              const ext = file.type ? file.type.split('/')[1] || 'png' : 'png';
+              const isDefaultName = !file.name || file.name === 'image.png' || file.name === 'blob';
+              const finalName = isDefaultName
+                ? `Pasted-Screenshot-${timestamp}.${ext}`
+                : file.name;
+              filesToUpload.push(new File([file], finalName, { type: file.type || 'image/png' }));
+            }
+          }
+        }
+      }
+
+      // Check e.clipboardData.files fallback
+      if (filesToUpload.length === 0 && e.clipboardData.files && e.clipboardData.files.length > 0) {
+        for (let i = 0; i < e.clipboardData.files.length; i++) {
+          const file = e.clipboardData.files[i];
+          filesToUpload.push(file);
+        }
+      }
+
+      if (filesToUpload.length > 0) {
+        e.preventDefault();
+        setPasteNotice(`📋 Uploading ${filesToUpload.length > 1 ? `${filesToUpload.length} files` : filesToUpload[0].name} from clipboard...`);
+        setTimeout(() => setPasteNotice(null), 3500);
+        processFiles(filesToUpload);
+        return;
+      }
+
+      // 2. Check for plain text or code pasted from clipboard
+      const text = e.clipboardData.getData('text');
+      if (text && text.trim().length > 0 && roomCode && socketToken) {
+        e.preventDefault();
+        try {
+          setPasteNotice('📋 Syncing text from clipboard to Live Notes...');
+          let contentToSend = text.trim();
+          if (roomKey) {
+            contentToSend = await encryptText(contentToSend, roomKey);
+          }
+          await createSnippet(roomCode, socketToken, contentToSend);
+          setPasteNotice('✅ Text added to Live Clipboard!');
+          setTimeout(() => setPasteNotice(null), 2500);
+        } catch {
+          setPasteNotice('❌ Failed to sync pasted text');
+          setTimeout(() => setPasteNotice(null), 2500);
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => {
+      window.removeEventListener('paste', handleGlobalPaste);
+    };
+  }, [roomCode, socketToken, roomKey, onUpload]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -228,6 +338,23 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
         </div>
       </div>
 
+      {/* Dynamic Paste or Camera Snap Banner */}
+      {pasteNotice && (
+        <div className="mb-4 p-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-xs flex items-center justify-between space-x-2 animate-fade-in shadow-sm">
+          <div className="flex items-center space-x-2 min-w-0">
+            <Clipboard className="w-4 h-4 text-yellow-400 flex-shrink-0 animate-bounce" />
+            <span className="font-semibold truncate">{pasteNotice}</span>
+          </div>
+          <button
+            onClick={() => setPasteNotice(null)}
+            className="text-slate-400 hover:text-white p-1 transition-colors flex-shrink-0"
+            title="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ZIP Compression Progress Banner */}
       {zipping && (
         <div className="mb-4 p-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-xs flex items-center space-x-2.5 animate-fade-in">
@@ -236,7 +363,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
         </div>
       )}
 
-      {/* Hidden File & Folder Inputs */}
+      {/* Hidden File, Folder & Native Camera Inputs */}
       <input
         type="file"
         ref={fileInputRef}
@@ -254,8 +381,17 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
         className="hidden"
         id="folder-upload-input"
       />
+      <input
+        type="file"
+        ref={cameraInputRef}
+        accept="image/*"
+        capture="environment"
+        onChange={handleCameraSnap}
+        className="hidden"
+        id="camera-snap-input"
+      />
 
-      {/* Modern Drag & Drop Upload Zone (supports files AND folders) */}
+      {/* Modern Drag & Drop Upload Zone (supports files, folders, camera snap & clipboard paste) */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -278,24 +414,46 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
         <h4 className="text-sm font-bold text-white mb-1">
           {uploading ? 'Streaming File Data...' : 'Drop files or folders here'}
         </h4>
-        <p className="text-xs text-slate-400 max-w-sm mb-3">
-          Drag & drop any file or folder hierarchy up to 100MB.
+        <p className="text-xs text-slate-400 max-w-sm mb-3.5">
+          Drag & drop files or folders, snap with camera, or paste from clipboard.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-2">
+          {/* Snap & Drop Mobile/Desktop Camera Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              cameraInputRef.current?.click();
+            }}
+            className="min-h-[36px] py-1.5 px-3.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-extrabold text-xs flex items-center space-x-1.5 transition-all active:scale-95 shadow-sm cursor-pointer"
+            title="Snap a photo or document with your camera and stream directly to the room"
+          >
+            <Camera className="w-3.5 h-3.5 text-slate-950" />
+            <span>Snap & Drop</span>
+          </button>
+
+          {/* Upload Folder Button */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               folderInputRef.current?.click();
             }}
-            className="py-1 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-yellow-400 border border-yellow-500/30 text-[11px] font-bold flex items-center space-x-1.5 transition-all"
+            className="min-h-[36px] py-1.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-yellow-400 border border-yellow-500/30 text-xs font-bold flex items-center space-x-1.5 transition-all active:scale-95"
+            title="Upload an entire directory folder hierarchy"
           >
             <Folder className="w-3.5 h-3.5" />
-            <span>Upload Entire Folder</span>
+            <span>Upload Folder</span>
           </button>
 
-          <span className="text-[11px] font-semibold text-slate-500">•</span>
+          {/* Desktop Clipboard Paste Hint */}
+          <div className="hidden sm:inline-flex items-center space-x-1.5 py-1 px-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-[11px] font-medium">
+            <Clipboard className="w-3.5 h-3.5 text-yellow-400" />
+            <span>Paste with <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-yellow-400 font-mono text-[10px] border border-slate-700">Ctrl+V</kbd> / <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-yellow-400 font-mono text-[10px] border border-slate-700">⌘V</kbd></span>
+          </div>
+
+          <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">•</span>
 
           <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-yellow-400">
             <Sparkles className="w-3.5 h-3.5" />

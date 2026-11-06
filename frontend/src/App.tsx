@@ -128,19 +128,19 @@ export const App: React.FC = () => {
           <div className="w-full flex flex-col items-center text-center">
             {/* Top Badge */}
             <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-semibold tracking-wide mb-6 animate-fade-in-up">
-              {/* <Zap className="w-3.5 h-3.5 text-yellow-400" /> */}
-              <span>Instant & Private Local Sharing</span>
+              <Zap className="w-3.5 h-3.5 text-yellow-400" />
+              <span>Instant Cross-Device AirDrop Alternative</span>
             </div>
 
             {/* Hero Heading */}
             <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.12] mb-5 animate-fade-in-up">
-              High-Speed Local Sharing.<br />
+              High-Speed File Sharing.<br />
               <span className="gradient-text">Zero Trace. Zero Logs.</span>
             </h1>
 
             {/* Hero Description */}
             <p className="text-sm sm:text-base text-slate-400 max-w-xl mb-8 leading-relaxed font-normal animate-fade-in-up delay-100">
-              Pair any phone, laptop, or tablet in seconds via QR code. Instantly sync files, photos, and live clipboard text with end-to-end memory isolation.
+              Pair any phone, laptop, or tablet in seconds via QR code. Transfer files, photos, clipboard text, and share screens peer-to-peer with zero-knowledge encryption.
             </p>
 
             {createError && (

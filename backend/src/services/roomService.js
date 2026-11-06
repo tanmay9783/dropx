@@ -40,9 +40,10 @@ export const roomService = {
       ownerToken,
     });
 
+    const participantId = `owner-${room.id.substring(0, 8)}`;
     const socketToken = generateSocketToken({
       roomCode: room.roomCode,
-      participantId: `owner-${room.id.substring(0, 8)}`,
+      participantId,
       role: 'owner',
     });
 
@@ -56,6 +57,7 @@ export const roomService = {
       },
       ownerToken,
       socketToken,
+      participantId,
     };
   },
 

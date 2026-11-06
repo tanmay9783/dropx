@@ -64,6 +64,9 @@ export const App: React.FC = () => {
       setActiveRoom(data.room);
       setOwnerToken(data.ownerToken);
       setSocketToken(data.socketToken);
+      if (data.participantId) {
+        setParticipantId(data.participantId);
+      }
       setAppState('ACTIVE_OWNER');
       window.history.pushState({}, '', `/room/${data.room.roomCode}`);
     } catch (err: any) {
@@ -326,6 +329,7 @@ export const App: React.FC = () => {
             room={activeRoom}
             ownerToken={ownerToken}
             socketToken={socketToken}
+            participantId={participantId || undefined}
             onExpire={handleExpire}
             onDestroy={resetToHome}
             onBack={resetToHome}

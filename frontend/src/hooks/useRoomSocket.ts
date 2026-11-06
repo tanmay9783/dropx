@@ -43,6 +43,7 @@ export function useRoomSocket({
   const [participantCount, setParticipantCount] = useState<number>(1);
   const [participants, setParticipants] = useState<ParticipantInfo[]>([]);
   const [notifications, setNotifications] = useState<SocketNotification[]>([]);
+  const [socketInstance, setSocketInstance] = useState<Socket | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
 
@@ -68,7 +69,12 @@ export function useRoomSocket({
   const currentParticipantId = (() => {
     try {
       if (!socketToken) return '';
-      const payload = JSON.parse(atob(socketToken.split('.')[1]));
+      const parts = socketToken.split('.');
+      const payloadPart = parts.length === 2 ? parts[0] : parts[1];
+      if (!payloadPart) return '';
+      const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+      const payload = JSON.parse(atob(padded));
       return payload.participantId || '';
     } catch {
       return '';
@@ -140,6 +146,7 @@ export function useRoomSocket({
     });
 
     socketRef.current = socket;
+    setSocketInstance(socket);
 
     socket.on('connect', () => {
       setStatus('CONNECTED');
@@ -216,6 +223,7 @@ export function useRoomSocket({
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      setSocketInstance(null);
     };
   }, [roomCode, socketToken]);
 
@@ -225,6 +233,6 @@ export function useRoomSocket({
     participants,
     notifications,
     currentParticipantId,
-    socket: socketRef.current,
+    socket: socketInstance || socketRef.current,
   };
 }

@@ -68,7 +68,7 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
   });
 
   // Real-Time Socket Presence & File Events
-  const { status: socketStatus, participantCount, participants, notifications, socket } = useRoomSocket({
+  const { status: socketStatus, participantCount, participants, notifications, currentParticipantId, socket } = useRoomSocket({
     roomCode: room.roomCode,
     socketToken,
     onRoomExpired: onExpire,
@@ -77,6 +77,8 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     onSnippetCreated: setNewSnippet,
     onSnippetDeleted: setDeletedSnippetId,
   });
+
+  const effectiveParticipantId = participantId || currentParticipantId;
 
   const {
     p2pStatus,
@@ -87,11 +89,11 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
     supportsScreenShare,
   } = useWebRTC({
     socket,
-    currentParticipantId: participantId,
+    currentParticipantId: effectiveParticipantId,
     participants,
   });
 
-  const peerDevice = participants.find((p) => p.id && p.id !== participantId);
+  const peerDevice = participants.find((p) => p.id && p.id !== effectiveParticipantId);
   const peerDeviceName = peerDevice?.deviceName || 'Host Device';
   const [isViewerOpen, setIsViewerOpen] = React.useState(false);
 

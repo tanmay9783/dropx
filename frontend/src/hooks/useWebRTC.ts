@@ -32,6 +32,9 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
       if (data.toParticipantId && currentParticipantId && data.toParticipantId !== currentParticipantId) {
         return; // Signal for another peer
       }
+      if (data.signal.type === 'screenshare:stopped') {
+        setRemoteStream(null);
+      }
       managerRef.current?.handleSignal(data.signal);
     };
 
@@ -49,6 +52,7 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
         activePeerIdRef.current = null;
       }
       setP2PStatus('DISCONNECTED');
+      setRemoteStream(null);
       return;
     }
 
@@ -120,7 +124,9 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
   );
 
   const startScreenShare = useCallback(async (mode: 'screen' | 'camera' = 'screen') => {
-    if (!managerRef.current) return null;
+    if (!managerRef.current) {
+      throw new Error('Peer connection not established. Connect a second device first.');
+    }
     const stream = await managerRef.current.startScreenShare(mode);
     if (stream) {
       setIsSharingScreen(true);

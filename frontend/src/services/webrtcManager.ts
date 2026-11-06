@@ -146,6 +146,11 @@ export class WebRTCManager {
       }
 
       if (signal.type === 'offer') {
+        const sdpStr = signal.sdp?.sdp || '';
+        const hasVideoSending =
+          /m=video [^0]/.test(sdpStr) &&
+          (sdpStr.includes('a=sendrecv') || sdpStr.includes('a=sendonly'));
+
         if (this.peerConnection.signalingState !== 'stable') {
           try {
             await this.peerConnection.setLocalDescription({ type: 'rollback' } as any);
@@ -164,6 +169,24 @@ export class WebRTCManager {
             toParticipantId: this.targetParticipantId,
             signal: { type: 'answer', sdp: this.peerConnection.localDescription },
           });
+        }
+
+        if (!hasVideoSending && this.remoteStream) {
+          this.clearRemoteStream();
+        } else if (hasVideoSending) {
+          const videoTransceiver = this.peerConnection
+            .getTransceivers()
+            .find((t) => t.receiver.track?.kind === 'video');
+          if (videoTransceiver && videoTransceiver.receiver.track) {
+            const track = videoTransceiver.receiver.track;
+            if (!this.remoteStream || this.remoteStream.getVideoTracks().every((tr) => tr.readyState === 'ended')) {
+              this.remoteStream = new MediaStream([track]);
+              this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
+              track.onended = () => {
+                this.clearRemoteStream();
+              };
+            }
+          }
         }
       } else if (signal.type === 'answer') {
         if (this.peerConnection.signalingState === 'have-local-offer') {
@@ -417,12 +440,13 @@ export class WebRTCManager {
         this.stopScreenShare();
       };
 
-      const senders = this.peerConnection.getSenders();
-      const existingSender = senders.find(
-        (s) => s.track?.kind === 'video' || (s as any).kind === 'video'
+      const transceivers = this.peerConnection.getTransceivers();
+      const videoTransceiver = transceivers.find(
+        (t) => t.sender.track?.kind === 'video' || t.receiver.track?.kind === 'video'
       );
-      if (existingSender) {
-        await existingSender.replaceTrack(videoTrack);
+      if (videoTransceiver) {
+        videoTransceiver.direction = 'sendrecv';
+        await videoTransceiver.sender.replaceTrack(videoTrack);
       } else {
         this.peerConnection.addTrack(videoTrack, stream);
       }
@@ -469,14 +493,15 @@ export class WebRTCManager {
     }
 
     if (this.peerConnection) {
-      const senders = this.peerConnection.getSenders();
-      for (const sender of senders) {
-        if (sender.track && sender.track.kind === 'video') {
+      const transceivers = this.peerConnection.getTransceivers();
+      for (const t of transceivers) {
+        if (t.sender.track?.kind === 'video' || t.receiver.track?.kind === 'video') {
           try {
-            await sender.replaceTrack(null);
+            await t.sender.replaceTrack(null);
+            t.direction = 'recvonly';
           } catch {}
           try {
-            this.peerConnection?.removeTrack(sender);
+            this.peerConnection.removeTrack(t.sender);
           } catch {}
         }
       }

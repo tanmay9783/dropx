@@ -58,6 +58,7 @@ export interface CreateRoomResponse {
   room: RoomData;
   ownerToken: string;
   socketToken: string;
+  participantId?: string;
 }
 
 export interface GetRoomResponse {

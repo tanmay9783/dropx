@@ -35,6 +35,7 @@ interface CreateRoomProps {
   room: RoomData;
   ownerToken: string;
   socketToken: string;
+  participantId?: string;
   onExpire: () => void;
   onDestroy: () => void;
   onBack: () => void;
@@ -44,6 +45,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
   room,
   ownerToken,
   socketToken,
+  participantId,
   onExpire,
   onDestroy,
   onBack,
@@ -100,6 +102,8 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
     onSnippetDeleted: setDeletedSnippetId,
   });
 
+  const effectiveParticipantId = participantId || currentParticipantId;
+
   const {
     p2pStatus,
     isSharingScreen,
@@ -109,11 +113,11 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
     supportsScreenShare,
   } = useWebRTC({
     socket,
-    currentParticipantId,
+    currentParticipantId: effectiveParticipantId,
     participants,
   });
 
-  const guestDevice = participants.find((p) => p.id && p.id !== currentParticipantId);
+  const guestDevice = participants.find((p) => p.id && p.id !== effectiveParticipantId);
   const guestDeviceName = guestDevice?.deviceName || 'Guest Device';
   const [isViewerOpen, setIsViewerOpen] = useState(false);
 
@@ -396,7 +400,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
         <ConnectedDevices
           participants={participants}
           participantCount={participantCount}
-          currentParticipantId={currentParticipantId}
+          currentParticipantId={effectiveParticipantId}
           isOwner={true}
         />
 
@@ -418,7 +422,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           roomCode={room.roomCode}
           socketToken={socketToken}
           roomKey={roomKey}
-          currentParticipantId={currentParticipantId}
+          currentParticipantId={effectiveParticipantId}
           files={files}
           loading={filesLoading}
           uploading={uploading}

@@ -29,11 +29,16 @@ export function useWebRTC({ socket, currentParticipantId, participants }: UseWeb
 
     const onWebRTCSignal = (data: { fromParticipantId: string; toParticipantId?: string; signal: any }) => {
       if (!data || !data.signal) return;
-      if (data.toParticipantId && currentParticipantId && data.toParticipantId !== currentParticipantId) {
-        return; // Signal for another peer
+      if (data.fromParticipantId && currentParticipantId && data.fromParticipantId === currentParticipantId) {
+        return; // Signal sent by ourselves
       }
       if (data.signal.type === 'screenshare:stopped') {
         setRemoteStream(null);
+        managerRef.current?.handleSignal(data.signal);
+        return;
+      }
+      if (data.toParticipantId && currentParticipantId && data.toParticipantId !== currentParticipantId) {
+        return; // Signal for another peer
       }
       managerRef.current?.handleSignal(data.signal);
     };

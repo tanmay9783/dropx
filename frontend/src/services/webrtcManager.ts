@@ -146,11 +146,6 @@ export class WebRTCManager {
       }
 
       if (signal.type === 'offer') {
-        const sdpStr = signal.sdp?.sdp || '';
-        const hasVideoSending =
-          /m=video [^0]/.test(sdpStr) &&
-          (sdpStr.includes('a=sendrecv') || sdpStr.includes('a=sendonly'));
-
         if (this.peerConnection.signalingState !== 'stable') {
           try {
             await this.peerConnection.setLocalDescription({ type: 'rollback' } as any);
@@ -169,24 +164,6 @@ export class WebRTCManager {
             toParticipantId: this.targetParticipantId,
             signal: { type: 'answer', sdp: this.peerConnection.localDescription },
           });
-        }
-
-        if (!hasVideoSending && this.remoteStream) {
-          this.clearRemoteStream();
-        } else if (hasVideoSending) {
-          const videoTransceiver = this.peerConnection
-            .getTransceivers()
-            .find((t) => t.receiver.track?.kind === 'video');
-          if (videoTransceiver && videoTransceiver.receiver.track) {
-            const track = videoTransceiver.receiver.track;
-            if (!this.remoteStream || this.remoteStream.getVideoTracks().every((tr) => tr.readyState === 'ended')) {
-              this.remoteStream = new MediaStream([track]);
-              this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
-              track.onended = () => {
-                this.clearRemoteStream();
-              };
-            }
-          }
         }
       } else if (signal.type === 'answer') {
         if (this.peerConnection.signalingState === 'have-local-offer') {
@@ -500,23 +477,7 @@ export class WebRTCManager {
             await t.sender.replaceTrack(null);
             t.direction = 'recvonly';
           } catch {}
-          try {
-            this.peerConnection.removeTrack(t.sender);
-          } catch {}
         }
-      }
-
-      try {
-        const offer = await this.peerConnection.createOffer();
-        await this.peerConnection.setLocalDescription(offer);
-        if (this.socket && this.targetParticipantId) {
-          this.socket.emit('webrtc:signal', {
-            toParticipantId: this.targetParticipantId,
-            signal: { type: 'offer', sdp: this.peerConnection.localDescription },
-          });
-        }
-      } catch {
-        // Ignore renegotiation failure on stop
       }
     }
   }

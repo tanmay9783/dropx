@@ -78,29 +78,29 @@ export const ConnectedDevices: React.FC<ConnectedDevicesProps> = ({
                   : 'bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800/60'
               }`}
             >
-              <div className="flex items-center space-x-2.5 min-w-0">
+              <div className="flex items-center space-x-2.5 min-w-0 flex-1">
                 <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-slate-700">
                   {getDeviceIcon(p)}
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center space-x-1.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center space-x-1.5 min-w-0">
                     <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                       {getDeviceLabel(p)}
                     </span>
                     {isCurrent && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-yellow-400 text-slate-950 font-extrabold uppercase">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-400 text-slate-950 font-extrabold uppercase flex-shrink-0">
                         You
                       </span>
                     )}
                   </div>
                   <div className="flex items-center space-x-1 text-[10px] text-slate-500 dark:text-slate-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
-                    <span>Real-time connected</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-yellow-400 animate-pulse flex-shrink-0"></span>
+                    <span className="truncate">Real-time connected</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-1 text-slate-400">
+              <div className="flex items-center space-x-1 text-slate-400 flex-shrink-0 ml-2">
                 <Wifi className="w-3.5 h-3.5 text-yellow-400" />
               </div>
             </div>

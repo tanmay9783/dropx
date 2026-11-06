@@ -100,6 +100,12 @@ export class WebRTCManager {
         this.remoteStream = stream;
         this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
 
+        event.track.onunmute = () => {
+          if (this.remoteStream) {
+            this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
+          }
+        };
+
         // Listen for track ending on receiver
         event.track.onended = () => {
           this.clearRemoteStream();
@@ -164,6 +170,25 @@ export class WebRTCManager {
             toParticipantId: this.targetParticipantId,
             signal: { type: 'answer', sdp: this.peerConnection.localDescription },
           });
+        }
+
+        // Attach video track from incoming offer (handles initial and renegotiated shares)
+        const videoTransceiver = this.peerConnection
+          .getTransceivers()
+          .find((t) => t.receiver.track?.kind === 'video' && t.receiver.track.readyState !== 'ended');
+        if (videoTransceiver && videoTransceiver.receiver.track) {
+          const track = videoTransceiver.receiver.track;
+          const stream = new MediaStream([track]);
+          this.remoteStream = stream;
+          this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
+          track.onunmute = () => {
+            if (this.remoteStream) {
+              this.remoteStreamListeners.forEach((l) => l(this.remoteStream));
+            }
+          };
+          track.onended = () => {
+            this.clearRemoteStream();
+          };
         }
       } else if (signal.type === 'answer') {
         if (this.peerConnection.signalingState === 'have-local-offer') {
@@ -350,14 +375,7 @@ export class WebRTCManager {
   }
 
   public clearRemoteStream() {
-    if (this.remoteStream) {
-      this.remoteStream.getTracks().forEach((t) => {
-        try {
-          t.stop();
-        } catch {}
-      });
-      this.remoteStream = null;
-    }
+    this.remoteStream = null;
     this.remoteStreamListeners.forEach((l) => l(null));
   }
 
@@ -377,18 +395,14 @@ export class WebRTCManager {
       try {
         stream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
-          audio: false,
         });
       } catch (err: any) {
         if (err.name === 'NotAllowedError') {
           return null; // User cancelled prompt
         }
-        if (err.name === 'NotSupportedError' || err.name === 'TypeError') {
-          throw new Error(
-            'Screen sharing is restricted by your device/browser. Please use "Share Camera" to stream live video instead.'
-          );
-        }
-        throw err;
+        throw new Error(
+          'Screen capture was not allowed or is restricted by this device. Please use "Share Camera" to stream live video instead.'
+        );
       }
     } else if (mode === 'camera') {
       if (typeof navigator === 'undefined' || typeof navigator.mediaDevices?.getUserMedia !== 'function') {

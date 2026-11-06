@@ -118,7 +118,7 @@ export const JoinRoom: React.FC<JoinRoomProps> = ({ onSuccess, onBack }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl transition-colors duration-300">
+    <div className="max-w-md mx-auto w-full glass-panel p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl transition-colors duration-300">
       <button
         onClick={onBack}
         className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 mb-6 transition-colors"

@@ -106,9 +106,9 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
   }, [remoteStream]);
 
   return (
-    <div className="max-w-2xl mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl transition-colors duration-300">
+    <div className="max-w-2xl mx-auto w-full glass-panel p-4 sm:p-8 md:p-10 rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl transition-colors duration-300">
       {/* Top Mobile Sticky Header */}
-      <div className="sticky top-2 z-30 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80 p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-lg flex items-center justify-between mb-6">
+      <div className="sticky top-2 z-30 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80 p-2.5 sm:p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-lg flex flex-wrap items-center justify-between gap-2.5 mb-5 sm:mb-6">
         <button
           onClick={onLeave}
           className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors py-1 px-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 min-h-[36px]"
@@ -185,7 +185,7 @@ export const ActiveRoom: React.FC<ActiveRoomProps> = ({
           <span className="text-[11px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">
             Active Room Code
           </span>
-          <span className="text-4xl sm:text-5xl font-black tracking-widest text-yellow-400 font-mono select-all">
+          <span className="text-3xl sm:text-5xl font-black tracking-widest text-yellow-400 font-mono select-all">
             {room.roomCode}
           </span>
         </div>

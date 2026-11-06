@@ -221,9 +221,9 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
   };
 
   return (
-    <div className="max-w-2xl mx-auto w-full glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl relative transition-colors duration-300">
+    <div className="max-w-2xl mx-auto w-full glass-panel p-4 sm:p-8 md:p-10 rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xl relative transition-colors duration-300">
       {/* Top Mobile Sticky Header */}
-      <div className="sticky top-2 z-30 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80 p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-lg flex items-center justify-between mb-6">
+      <div className="sticky top-2 z-30 backdrop-blur-xl bg-white/80 dark:bg-slate-950/80 p-2.5 sm:p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-lg flex flex-wrap items-center justify-between gap-2.5 mb-5 sm:mb-6">
         <button
           onClick={onBack}
           className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors py-1 px-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 min-h-[36px]"
@@ -325,7 +325,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
           <span className="text-[11px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">
             Room Code
           </span>
-          <span className="text-4xl sm:text-5xl font-black tracking-widest text-yellow-400 font-mono select-all">
+          <span className="text-3xl sm:text-5xl font-black tracking-widest text-yellow-400 font-mono select-all">
             {room.roomCode}
           </span>
         </div>
@@ -334,7 +334,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 my-5">
           <button
             onClick={handleCopyCode}
-            className="py-2.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-yellow-400 text-xs font-bold border border-yellow-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
+            className="min-h-[44px] py-2.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-yellow-400 text-xs font-bold border border-yellow-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
           >
             {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-yellow-400" />}
             <span>{copiedCode ? 'Copied' : 'Code'}</span>
@@ -342,7 +342,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
 
           <button
             onClick={handleCopyLink}
-            className="py-2.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-yellow-400 text-xs font-bold border border-yellow-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
+            className="min-h-[44px] py-2.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-yellow-400 text-xs font-bold border border-yellow-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
           >
             {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Link className="w-3.5 h-3.5 text-yellow-400" />}
             <span>{copiedLink ? 'Copied' : 'Link'}</span>
@@ -350,7 +350,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
 
           <button
             onClick={handleWhatsAppShare}
-            className="py-2.5 px-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
+            className="min-h-[44px] py-2.5 px-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
           >
             <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
             <span>WhatsApp</span>
@@ -358,7 +358,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
 
           <button
             onClick={handleNativeShare}
-            className="py-2.5 px-2.5 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 text-xs font-bold border border-yellow-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
+            className="min-h-[44px] py-2.5 px-2.5 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 text-xs font-bold border border-yellow-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
           >
             {sharedNative ? <Check className="w-3.5 h-3.5 text-yellow-400" /> : <Share2 className="w-3.5 h-3.5 text-yellow-400" />}
             <span>Share</span>
@@ -366,7 +366,7 @@ export const CreateRoom: React.FC<CreateRoomProps> = ({
 
           <button
             onClick={handleDownloadQR}
-            className="col-span-2 sm:col-span-1 py-2.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-yellow-400 text-xs font-bold border border-yellow-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
+            className="col-span-2 sm:col-span-1 min-h-[44px] py-2.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-yellow-400 text-xs font-bold border border-yellow-500/30 transition-all flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm"
           >
             <DownloadCloud className="w-3.5 h-3.5 text-yellow-400" />
             <span>Save QR</span>

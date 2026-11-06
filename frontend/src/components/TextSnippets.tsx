@@ -294,7 +294,7 @@ export const TextSnippets: React.FC<TextSnippetsProps> = ({
             onChange={(e) => setInputContent(e.target.value)}
             placeholder="Type note, paste clipboard text, JSON, or code snippet..."
             rows={3}
-            className="w-full p-3.5 rounded-2xl bg-black border border-slate-800 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:ring-1 focus:ring-yellow-400/50 resize-y leading-relaxed"
+            className="w-full p-3.5 rounded-2xl bg-black border border-slate-800 text-base sm:text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:ring-1 focus:ring-yellow-400/50 resize-y leading-relaxed"
           />
         )}
 

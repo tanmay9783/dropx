@@ -433,11 +433,11 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <div className="flex items-center space-x-2 w-full sm:w-auto justify-end pt-1 sm:pt-0">
                   {/* In-Browser Preview Button */}
                   <button
                     onClick={() => setPreviewingFile(file)}
-                    className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-yellow-400 border border-slate-800 hover:border-yellow-500/30 text-xs font-bold transition-all flex items-center space-x-1.5 active:scale-95"
+                    className="flex-1 sm:flex-initial justify-center min-h-[38px] py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-yellow-400 border border-slate-800 hover:border-yellow-500/30 text-xs font-bold transition-all flex items-center space-x-1.5 active:scale-95"
                     title="Preview file in browser"
                   >
                     <Eye className="w-3.5 h-3.5" />
@@ -448,7 +448,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
                   <button
                     onClick={() => onDownload && onDownload(file.id)}
                     disabled={isDownloading}
-                    className="py-2 px-3.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-xs shadow-sm transition-all flex items-center space-x-1.5 active:scale-95 disabled:opacity-50"
+                    className="flex-1 sm:flex-initial justify-center min-h-[38px] py-2 px-3.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-xs shadow-sm transition-all flex items-center space-x-1.5 active:scale-95 disabled:opacity-50"
                   >
                     {isDownloading ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -462,7 +462,7 @@ export const SharedFiles: React.FC<SharedFilesProps> = ({
                   <button
                     onClick={() => onDelete(file.id)}
                     title="Delete file"
-                    className="py-2 px-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs transition-all active:scale-95"
+                    className="min-h-[38px] min-w-[38px] flex items-center justify-center p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs transition-all active:scale-95"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
